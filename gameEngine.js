@@ -1,0 +1,544 @@
+// Game Engine for Dino Run
+class DinoGame {
+    constructor(canvasId) {
+        this.canvas = document.getElementById(canvasId);
+        this.ctx = this.canvas.getContext('2d');
+        
+        // Game state
+        this.isRunning = false;
+        this.isPaused = false;
+        this.gameSpeed = 1;
+        this.score = 0;
+        this.highScore = localStorage.getItem('dinoHighScore') || 0;
+        
+        // Game objects
+        this.player = new Player();
+        this.obstacles = [];
+        this.clouds = [];
+        this.ground = new Ground();
+        
+        // Timing
+        this.lastObstacleTime = 0;
+        this.lastCloudTime = 0;
+        this.frameCount = 0;
+        
+        // Settings that will be controlled by feature flags
+        this.settings = {
+            obstacleSpeed: 5,
+            obstacleFrequency: 100,
+            jumpHeight: 90
+        };
+        
+        this.init();
+    }
+    
+    init() {
+        this.setupEventListeners();
+        this.updateHighScoreDisplay();
+        this.generateClouds();
+    }
+    
+    setupEventListeners() {
+        // Jump controls
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                e.preventDefault();
+                this.handleJump();
+            }
+        });
+        
+        // Touch support for mobile
+        this.canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            this.handleJump();
+        });
+        
+        // Restart button
+        const restartBtn = document.getElementById('restartBtn');
+        if (restartBtn) {
+            restartBtn.addEventListener('click', () => {
+                this.restart();
+            });
+        }
+    }
+    
+    handleJump() {
+        if (!this.isRunning && !this.isPaused) {
+            this.start();
+        } else if (this.isRunning && this.player.canJump()) {
+            this.player.jump();
+        }
+    }
+    
+    start() {
+        this.isRunning = true;
+        this.isPaused = false;
+        this.score = 0;
+        this.obstacles = [];
+        this.frameCount = 0;
+        this.player.reset();
+        this.updateGameStatus('Running...');
+        this.updateScore();
+        this.hideRestartButton();
+        this.gameLoop();
+    }
+    
+    restart() {
+        this.start();
+    }
+    
+    pause() {
+        this.isPaused = true;
+        this.updateGameStatus('Paused - Press SPACE to continue');
+    }
+    
+    resume() {
+        this.isPaused = false;
+        this.updateGameStatus('Running...');
+        this.gameLoop();
+    }
+    
+    gameOver() {
+        this.isRunning = false;
+        this.updateGameStatus('Game Over - Press SPACE to restart');
+        this.showRestartButton();
+        
+        if (this.score > this.highScore) {
+            this.highScore = this.score;
+            localStorage.setItem('dinoHighScore', this.highScore);
+            this.updateHighScoreDisplay();
+        }
+    }
+    
+    gameLoop() {
+        if (!this.isRunning || this.isPaused) return;
+        
+        this.update();
+        this.draw();
+        this.frameCount++;
+        
+        requestAnimationFrame(() => this.gameLoop());
+    }
+    
+    update() {
+        // Update game speed based on score
+        this.gameSpeed = 1 + (this.score / 1000) * 0.5;
+        
+        // Update player
+        this.player.update();
+        
+        // Generate obstacles
+        if (this.frameCount - this.lastObstacleTime > this.settings.obstacleFrequency) {
+            this.obstacles.push(new Obstacle());
+            this.lastObstacleTime = this.frameCount;
+        }
+        
+        // Generate clouds occasionally
+        if (this.frameCount - this.lastCloudTime > 200 + Math.random() * 100) {
+            this.clouds.push(new Cloud());
+            this.lastCloudTime = this.frameCount;
+        }
+        
+        // Update obstacles
+        this.obstacles.forEach(obstacle => {
+            obstacle.update(this.settings.obstacleSpeed * this.gameSpeed);
+        });
+        
+        // Update clouds
+        this.clouds.forEach(cloud => {
+            cloud.update(this.gameSpeed * 0.5);
+        });
+        
+        // Remove off-screen obstacles and clouds
+        this.obstacles = this.obstacles.filter(obstacle => !obstacle.isOffScreen());
+        this.clouds = this.clouds.filter(cloud => !cloud.isOffScreen());
+        
+        // Check collisions
+        this.obstacles.forEach(obstacle => {
+            if (this.player.collidesWith(obstacle)) {
+                this.gameOver();
+            }
+        });
+        
+        // Update score
+        this.score += Math.floor(this.gameSpeed);
+        this.updateScore();
+        
+        // Update ground
+        this.ground.update(this.settings.obstacleSpeed * this.gameSpeed);
+    }
+    
+    draw() {
+        // Clear canvas
+        this.ctx.fillStyle = window.ldManager ? window.ldManager.getWeatherBackground() : '#87ceeb';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        // Draw clouds
+        this.clouds.forEach(cloud => cloud.draw(this.ctx));
+        
+        // Draw ground
+        this.ground.draw(this.ctx);
+        
+        // Draw player
+        this.player.draw(this.ctx);
+        
+        // Draw obstacles
+        this.obstacles.forEach(obstacle => obstacle.draw(this.ctx));
+    }
+    
+    generateClouds() {
+        for (let i = 0; i < 3; i++) {
+            this.clouds.push(new Cloud(Math.random() * this.canvas.width));
+        }
+    }
+    
+    updateScore() {
+        const scoreElement = document.getElementById('score');
+        if (scoreElement) {
+            scoreElement.textContent = Math.floor(this.score);
+        }
+    }
+    
+    updateHighScoreDisplay() {
+        const highScoreElement = document.getElementById('highScore');
+        if (highScoreElement) {
+            highScoreElement.textContent = this.highScore;
+        }
+    }
+    
+    updateGameStatus(status) {
+        const statusElement = document.getElementById('gameStatus');
+        if (statusElement) {
+            statusElement.textContent = status;
+        }
+    }
+    
+    showRestartButton() {
+        const restartBtn = document.getElementById('restartBtn');
+        if (restartBtn) {
+            restartBtn.style.display = 'inline-block';
+        }
+    }
+    
+    hideRestartButton() {
+        const restartBtn = document.getElementById('restartBtn');
+        if (restartBtn) {
+            restartBtn.style.display = 'none';
+        }
+    }
+    
+    updateSettings(newSettings) {
+        this.settings = { ...this.settings, ...newSettings };
+        this.player.jumpHeight = this.settings.jumpHeight;
+    }
+}
+
+// Player class
+class Player {
+    constructor() {
+        this.x = 50;
+        this.y = 150;
+        this.width = 20;
+        this.height = 20;
+        this.jumpHeight = 90;
+        this.jumpSpeed = 0;
+        this.gravity = 0.8;
+        this.isJumping = false;
+        this.groundY = 150;
+        this.color = '#2d7d32'; // Default green
+        this.animationFrame = 0; // For walking animation
+        this.animationSpeed = 0.3;
+    }
+    
+    reset() {
+        this.y = this.groundY;
+        this.jumpSpeed = 0;
+        this.isJumping = false;
+    }
+    
+    jump() {
+        if (this.canJump()) {
+            this.jumpSpeed = -this.jumpHeight / 6;
+            this.isJumping = true;
+        }
+    }
+    
+    canJump() {
+        return this.y >= this.groundY - 5;
+    }
+    
+    update() {
+        if (this.isJumping || this.y < this.groundY) {
+            this.jumpSpeed += this.gravity;
+            this.y += this.jumpSpeed;
+            
+            if (this.y >= this.groundY) {
+                this.y = this.groundY;
+                this.jumpSpeed = 0;
+                this.isJumping = false;
+            }
+        }
+        
+        // Update animation frame for walking animation
+        if (!this.isJumping) {
+            this.animationFrame += this.animationSpeed;
+        }
+        
+        // Update color from feature flag
+        if (window.ldManager && window.ldManager.isInitialized) {
+            this.color = window.ldManager.getDinoColorHex(window.ldManager.getDinoColor());
+        }
+    }
+    
+    draw(ctx) {
+        ctx.save();
+        
+        // Main dinosaur color
+        ctx.fillStyle = this.color;
+        
+        // Body (main torso) - rounded rectangle with subtle bounce
+        const bodyBounce = this.isJumping ? 0 : Math.sin(this.animationFrame * 2) * 0.5;
+        this.drawRoundedRect(ctx, this.x, this.y + 5 + bodyBounce, this.width, this.height - 8, 3);
+        
+        // Head - larger and more dinosaur-like
+        ctx.beginPath();
+        ctx.ellipse(this.x + this.width + 2, this.y - 2 + bodyBounce, 8, 6, 0, 0, 2 * Math.PI);
+        ctx.fill();
+        
+        // Neck connection
+        ctx.fillRect(this.x + this.width - 2, this.y + 2 + bodyBounce, 6, 8);
+        
+        // Tail
+        ctx.beginPath();
+        ctx.ellipse(this.x - 8, this.y + 8 + bodyBounce, 10, 4, 0, 0, 2 * Math.PI);
+        ctx.fill();
+        
+        // Tail connection
+        ctx.fillRect(this.x - 4, this.y + 6 + bodyBounce, 6, 6);
+        
+        // Legs with walking animation
+        const legWidth = 3;
+        const legHeight = 8;
+        const legY = this.y + this.height - 3;
+        
+        // Calculate leg offset for walking animation
+        const walkCycle = Math.sin(this.animationFrame) * 2;
+        const walkCycle2 = Math.sin(this.animationFrame + Math.PI) * 2;
+        
+        // Back leg (animated)
+        const backLegOffset = this.isJumping ? 0 : walkCycle;
+        ctx.fillRect(this.x + 3 + backLegOffset, legY, legWidth, legHeight);
+        
+        // Front leg (animated, opposite phase)
+        const frontLegOffset = this.isJumping ? 0 : walkCycle2;
+        ctx.fillRect(this.x + 12 + frontLegOffset, legY, legWidth, legHeight);
+        
+        // Feet (follow the legs)
+        ctx.fillRect(this.x + 2 + backLegOffset, legY + legHeight - 1, legWidth + 2, 2);
+        ctx.fillRect(this.x + 11 + frontLegOffset, legY + legHeight - 1, legWidth + 2, 2);
+        
+        // Eye
+        ctx.fillStyle = 'white';
+        ctx.beginPath();
+        ctx.ellipse(this.x + this.width + 5, this.y - 1 + bodyBounce, 2.5, 2, 0, 0, 2 * Math.PI);
+        ctx.fill();
+        
+        // Pupil
+        ctx.fillStyle = 'black';
+        ctx.beginPath();
+        ctx.ellipse(this.x + this.width + 6, this.y - 1 + bodyBounce, 1, 1, 0, 0, 2 * Math.PI);
+        ctx.fill();
+        
+        // Nostril
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.beginPath();
+        ctx.ellipse(this.x + this.width + 8, this.y + 1 + bodyBounce, 0.8, 0.5, 0, 0, 2 * Math.PI);
+        ctx.fill();
+        
+        // Add some texture/pattern on the body
+        ctx.fillStyle = this.getDarkerShade(this.color);
+        
+        // Back stripe
+        ctx.fillRect(this.x + 2, this.y + 6 + bodyBounce, this.width - 4, 2);
+        
+        // Belly area (lighter)
+        ctx.fillStyle = this.getLighterShade(this.color);
+        ctx.fillRect(this.x + 3, this.y + 12 + bodyBounce, this.width - 6, 4);
+        
+        // Small spikes on back
+        ctx.fillStyle = this.getDarkerShade(this.color);
+        for (let i = 0; i < 3; i++) {
+            const spikeX = this.x + 4 + (i * 4);
+            const spikeY = this.y + 4 + bodyBounce;
+            ctx.beginPath();
+            ctx.moveTo(spikeX, spikeY);
+            ctx.lineTo(spikeX + 2, spikeY - 3);
+            ctx.lineTo(spikeX + 4, spikeY);
+            ctx.closePath();
+            ctx.fill();
+        }
+        
+        ctx.restore();
+    }
+    
+    // Helper method to draw rounded rectangles
+    drawRoundedRect(ctx, x, y, width, height, radius) {
+        ctx.beginPath();
+        ctx.moveTo(x + radius, y);
+        ctx.lineTo(x + width - radius, y);
+        ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+        ctx.lineTo(x + width, y + height - radius);
+        ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+        ctx.lineTo(x + radius, y + height);
+        ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+        ctx.lineTo(x, y + radius);
+        ctx.quadraticCurveTo(x, y, x + radius, y);
+        ctx.closePath();
+        ctx.fill();
+    }
+    
+    // Helper method to get a darker shade of the current color
+    getDarkerShade(color) {
+        const colors = {
+            '#2d7d32': '#1b5e20',  // green -> dark green
+            '#1976d2': '#0d47a1',  // blue -> dark blue
+            '#d32f2f': '#b71c1c',  // red -> dark red
+            '#7b1fa2': '#4a148c',  // purple -> dark purple
+            '#f57c00': '#e65100',  // orange -> dark orange
+            '#c2185b': '#880e4f'   // pink -> dark pink
+        };
+        return colors[color] || '#333333';
+    }
+    
+    // Helper method to get a lighter shade of the current color
+    getLighterShade(color) {
+        const colors = {
+            '#2d7d32': '#66bb6a',  // green -> light green
+            '#1976d2': '#42a5f5',  // blue -> light blue
+            '#d32f2f': '#ef5350',  // red -> light red
+            '#7b1fa2': '#ab47bc',  // purple -> light purple
+            '#f57c00': '#ffa726',  // orange -> light orange
+            '#c2185b': '#ec407a'   // pink -> light pink
+        };
+        return colors[color] || '#cccccc';
+    }
+    
+    collidesWith(obstacle) {
+        // More precise collision detection considering the dinosaur's shape
+        // Main body collision
+        const bodyCollision = this.x < obstacle.x + obstacle.width &&
+                             this.x + this.width > obstacle.x &&
+                             this.y + 5 < obstacle.y + obstacle.height &&
+                             this.y + this.height > obstacle.y;
+        
+        // Head collision (head extends further to the right)
+        const headCollision = this.x + this.width - 6 < obstacle.x + obstacle.width &&
+                             this.x + this.width + 10 > obstacle.x &&
+                             this.y - 8 < obstacle.y + obstacle.height &&
+                             this.y + 4 > obstacle.y;
+        
+        return bodyCollision || headCollision;
+    }
+}
+
+// Obstacle class
+class Obstacle {
+    constructor() {
+        this.x = 800;
+        this.y = 130;
+        this.width = 15 + Math.random() * 10;
+        this.height = 40 + Math.random() * 20;
+        this.color = '#654321';
+    }
+    
+    update(speed) {
+        this.x -= speed;
+    }
+    
+    draw(ctx) {
+        ctx.fillStyle = this.color;
+        ctx.fillRect(this.x, this.y, this.width, this.height);
+    }
+    
+    isOffScreen() {
+        return this.x + this.width < 0;
+    }
+}
+
+// Cloud class
+class Cloud {
+    constructor(x = 800) {
+        this.x = x;
+        this.y = 20 + Math.random() * 50;
+        this.width = 30 + Math.random() * 20;
+        this.height = 15 + Math.random() * 10;
+        this.color = 'white';
+        this.opacity = 0.7;
+    }
+    
+    update(speed) {
+        this.x -= speed;
+    }
+    
+    draw(ctx) {
+        ctx.globalAlpha = this.opacity;
+        ctx.fillStyle = this.color;
+        ctx.fillRect(this.x, this.y, this.width, this.height);
+        ctx.fillRect(this.x + 10, this.y - 5, this.width - 10, this.height);
+        ctx.fillRect(this.x + 5, this.y + 5, this.width - 5, this.height);
+        ctx.globalAlpha = 1;
+    }
+    
+    isOffScreen() {
+        return this.x + this.width < 0;
+    }
+}
+
+// Ground class
+class Ground {
+    constructor() {
+        this.x = 0;
+        this.y = 180;
+        this.width = 800;
+        this.height = 20;
+        this.color = '#8B4513';
+        this.pattern = [];
+        this.generatePattern();
+    }
+    
+    generatePattern() {
+        for (let i = 0; i < this.width + 50; i += 10) {
+            this.pattern.push({
+                x: i,
+                height: 2 + Math.random() * 3
+            });
+        }
+    }
+    
+    update(speed) {
+        this.pattern.forEach(segment => {
+            segment.x -= speed;
+        });
+        
+        // Add new segments as old ones move off screen
+        this.pattern = this.pattern.filter(segment => segment.x > -50);
+        while (this.pattern.length === 0 || this.pattern[this.pattern.length - 1].x < this.width + 50) {
+            const lastX = this.pattern.length > 0 ? this.pattern[this.pattern.length - 1].x : 0;
+            this.pattern.push({
+                x: lastX + 10,
+                height: 2 + Math.random() * 3
+            });
+        }
+    }
+    
+    draw(ctx) {
+        ctx.fillStyle = this.color;
+        ctx.fillRect(0, this.y, this.width, this.height);
+        
+        // Draw pattern
+        ctx.fillStyle = '#A0522D';
+        this.pattern.forEach(segment => {
+            ctx.fillRect(segment.x, this.y - segment.height, 8, segment.height);
+        });
+    }
+} 

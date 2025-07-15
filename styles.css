@@ -1,0 +1,183 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Arial', sans-serif;
+    background: linear-gradient(135deg, #74b9ff, #0984e3);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #333;
+}
+
+.game-container {
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    max-width: 900px;
+    width: 100%;
+    margin: 20px;
+}
+
+.game-header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.game-header h1 {
+    color: #2d3436;
+    margin-bottom: 15px;
+    font-size: 2.5em;
+}
+
+.feature-flags-status {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+.flag-status {
+    background: #f8f9fa;
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 2px solid #e9ecef;
+    font-size: 14px;
+}
+
+.flag-name {
+    font-weight: bold;
+    color: #495057;
+}
+
+.flag-value {
+    color: #007bff;
+    margin-left: 5px;
+}
+
+.game-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+#gameCanvas {
+    border: 3px solid #2d3436;
+    border-radius: 10px;
+    background: #87ceeb;
+    margin-bottom: 15px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.game-info {
+    display: flex;
+    gap: 30px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.score, .high-score {
+    font-size: 18px;
+    font-weight: bold;
+    color: #2d3436;
+}
+
+.score span, .high-score span {
+    color: #00b894;
+}
+
+.game-status {
+    font-size: 16px;
+    color: #636e72;
+    font-weight: bold;
+}
+
+.controls {
+    text-align: center;
+    color: #636e72;
+}
+
+.controls p {
+    margin-bottom: 10px;
+}
+
+kbd {
+    background: #e9ecef;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-family: monospace;
+    font-size: 14px;
+}
+
+#restartBtn {
+    background: #00b894;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+#restartBtn:hover {
+    background: #00a085;
+}
+
+/* Weather backgrounds */
+.weather-spring {
+    background: linear-gradient(to bottom, #87ceeb 0%, #98fb98 100%);
+}
+
+.weather-summer {
+    background: linear-gradient(to bottom, #ffeb3b 0%, #87ceeb 100%);
+}
+
+.weather-autumn {
+    background: linear-gradient(to bottom, #ff9800 0%, #8d6e63 100%);
+}
+
+.weather-winter {
+    background: linear-gradient(to bottom, #e3f2fd 0%, #ffffff 100%);
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .game-container {
+        margin: 10px;
+        padding: 15px;
+    }
+    
+    .game-header h1 {
+        font-size: 2em;
+    }
+    
+    .feature-flags-status {
+        gap: 10px;
+    }
+    
+    .flag-status {
+        font-size: 12px;
+        padding: 6px 12px;
+    }
+    
+    #gameCanvas {
+        width: 100%;
+        max-width: 600px;
+        height: auto;
+    }
+    
+    .game-info {
+        gap: 15px;
+    }
+} 

@@ -1,0 +1,15 @@
+# Terraform Variables Example File
+# Copy this file to terraform.tfvars and update with your values
+
+# Required: LaunchDarkly access token
+# Get this from LaunchDarkly Dashboard -> Account Settings -> Authorization
+launchdarkly_access_token = "your-launchdarkly-access-token-here"
+
+# Optional: Customize project settings (defaults provided)
+project_key  = "sihaotan-dino-run"        # Change if you want a different project key
+project_name = "Sihao Tan - Dino Run"     # Change if you want a different display name
+
+# Optional: Customize feature flag keys (defaults match the game code)
+dino_color_flag_key = "dino-color"
+difficulty_flag_key = "game-difficulty"
+weather_flag_key    = "weather-background" 

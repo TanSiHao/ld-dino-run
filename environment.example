@@ -1,0 +1,18 @@
+# LaunchDarkly Configuration
+# Copy this file to .env and fill in your actual values
+
+# Get your Client-side ID from LaunchDarkly Dashboard:
+# Account Settings -> Projects -> [Your Project] -> Environments -> [Environment] -> Client-side ID
+LAUNCHDARKLY_CLIENT_SIDE_ID=your-client-side-id-here
+
+# LaunchDarkly Project Configuration  
+LAUNCHDARKLY_PROJECT_NAME=sihaotan-dino-run
+
+# Feature Flag Keys (these should match your Terraform configuration)
+LAUNCHDARKLY_DINO_COLOR_FLAG=dino-color
+LAUNCHDARKLY_DIFFICULTY_FLAG=game-difficulty
+LAUNCHDARKLY_WEATHER_FLAG=weather-background
+
+# Terraform Variables (for infrastructure provisioning)
+# Get your Access Token from LaunchDarkly Dashboard -> Account Settings -> Authorization
+LAUNCHDARKLY_ACCESS_TOKEN=your-access-token-here 

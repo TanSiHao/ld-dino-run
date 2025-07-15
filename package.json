@@ -1,0 +1,19 @@
+{
+  "name": "ld-dino-run",
+  "version": "1.0.0",
+  "description": "A Dino Run game with LaunchDarkly feature flags",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx live-server --port=3000 --open=/index.html",
+    "dev": "npm start"
+  },
+  "dependencies": {
+    "launchdarkly-js-client-sdk": "^3.4.0"
+  },
+  "devDependencies": {
+    "live-server": "^1.2.2"
+  },
+  "keywords": ["game", "dino", "launchdarkly", "feature-flags"],
+  "author": "",
+  "license": "MIT"
+} 

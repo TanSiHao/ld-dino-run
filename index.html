@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LaunchDarkly Dino Run</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="game-container">
+        <header class="game-header">
+            <h1>🦕 LaunchDarkly Dino Run</h1>
+            <div class="feature-flags-status">
+                <div class="flag-status" id="dino-color-status">
+                    <span class="flag-name">Dino Color:</span>
+                    <span class="flag-value" id="dino-color-value">Loading...</span>
+                </div>
+                <div class="flag-status" id="difficulty-status">
+                    <span class="flag-name">Difficulty:</span>
+                    <span class="flag-value" id="difficulty-value">Loading...</span>
+                </div>
+                <div class="flag-status" id="weather-status">
+                    <span class="flag-name">Weather:</span>
+                    <span class="flag-value" id="weather-value">Loading...</span>
+                </div>
+            </div>
+        </header>
+        
+        <div class="game-area">
+            <canvas id="gameCanvas" width="800" height="200"></canvas>
+            <div class="game-info">
+                <div class="score">Score: <span id="score">0</span></div>
+                <div class="high-score">High Score: <span id="highScore">0</span></div>
+                <div class="game-status" id="gameStatus">Press SPACE to start</div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <p>Controls: Press <kbd>SPACE</kbd> to jump</p>
+            <button id="restartBtn" style="display: none;">Restart Game</button>
+        </div>
+    </div>
+
+    <!-- LaunchDarkly SDK -->
+    <script src="https://unpkg.com/launchdarkly-js-client-sdk@3.4.0/dist/ldclient.min.js"></script>
+    
+    <!-- Game Scripts -->
+    <script src="config.js"></script>
+    <script src="launchDarklyConfig.js"></script>
+    <script src="gameEngine.js"></script>
+    <script src="app.js"></script>
+</body>
+</html> 
