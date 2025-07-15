@@ -36,6 +36,45 @@ class DinoGame {
         this.setupEventListeners();
         this.updateHighScoreDisplay();
         this.generateClouds();
+        this.initializeUI();
+    }
+    
+    initializeUI() {
+        // Show the start overlay initially
+        this.showStartOverlay();
+        
+        // Set up floating instructions
+        this.setupFloatingInstructions();
+    }
+    
+    showStartOverlay() {
+        const overlay = document.getElementById('gameStartOverlay');
+        if (overlay) {
+            overlay.style.display = 'flex';
+        }
+    }
+    
+    hideStartOverlay() {
+        const overlay = document.getElementById('gameStartOverlay');
+        if (overlay) {
+            overlay.style.display = 'none';
+        }
+    }
+    
+    setupFloatingInstructions() {
+        this.floatingInstructionsTimer = null;
+    }
+    
+    showFloatingInstructions() {
+        const instructions = document.getElementById('floatingInstructions');
+        if (instructions) {
+            instructions.classList.add('show');
+            
+            // Hide after 3 seconds
+            setTimeout(() => {
+                instructions.classList.remove('show');
+            }, 3000);
+        }
     }
     
     setupEventListeners() {
@@ -63,6 +102,10 @@ class DinoGame {
     }
     
     handleJump() {
+        // Check if start overlay is visible
+        const overlay = document.getElementById('gameStartOverlay');
+        const overlayVisible = overlay && overlay.style.display !== 'none';
+        
         if (!this.isRunning && !this.isPaused) {
             this.start();
         } else if (this.isRunning && this.player.canJump()) {
@@ -77,9 +120,16 @@ class DinoGame {
         this.obstacles = [];
         this.frameCount = 0;
         this.player.reset();
-        this.updateGameStatus('Running...');
+        this.hideStartOverlay();
+        this.updateGameStatus('🏃‍♂️ Running! Jump to avoid obstacles!');
         this.updateScore();
         this.hideRestartButton();
+        
+        // Show floating instructions for new players
+        setTimeout(() => {
+            this.showFloatingInstructions();
+        }, 1000);
+        
         this.gameLoop();
     }
     
@@ -100,14 +150,20 @@ class DinoGame {
     
     gameOver() {
         this.isRunning = false;
-        this.updateGameStatus('Game Over - Press SPACE to restart');
+        this.updateGameStatus('💥 Game Over! You did great!');
         this.showRestartButton();
         
         if (this.score > this.highScore) {
             this.highScore = this.score;
             localStorage.setItem('dinoHighScore', this.highScore);
             this.updateHighScoreDisplay();
+            this.updateGameStatus('🎉 New High Score! Amazing!');
         }
+        
+        // Show start overlay again after a delay
+        setTimeout(() => {
+            this.showStartOverlay();
+        }, 2000);
     }
     
     gameLoop() {
@@ -195,7 +251,21 @@ class DinoGame {
     updateScore() {
         const scoreElement = document.getElementById('score');
         if (scoreElement) {
-            scoreElement.textContent = Math.floor(this.score);
+            const newScore = Math.floor(this.score);
+            const oldScore = parseInt(scoreElement.textContent) || 0;
+            
+            scoreElement.textContent = newScore;
+            
+            // Add pulse animation when score increases significantly
+            if (newScore > oldScore && newScore % 100 === 0) {
+                const scoreContainer = scoreElement.closest('.score');
+                if (scoreContainer) {
+                    scoreContainer.classList.add('score-pulse');
+                    setTimeout(() => {
+                        scoreContainer.classList.remove('score-pulse');
+                    }, 300);
+                }
+            }
         }
     }
     

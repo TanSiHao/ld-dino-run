@@ -26,18 +26,75 @@
             </div>
         </header>
         
+        <!-- Game Start Overlay -->
+        <div class="game-start-overlay" id="gameStartOverlay">
+            <div class="start-content">
+                <div class="dino-emoji">🦕</div>
+                <h2>Welcome to Dino Run!</h2>
+                <div class="start-instructions">
+                    <div class="instruction-item">
+                        <span class="instruction-icon">🚀</span>
+                        <span>Press <kbd>SPACE</kbd> to start running!</span>
+                    </div>
+                    <div class="instruction-item">
+                        <span class="instruction-icon">⬆️</span>
+                        <span>Press <kbd>SPACE</kbd> to jump over obstacles</span>
+                    </div>
+                    <div class="instruction-item">
+                        <span class="instruction-icon">📱</span>
+                        <span>Or tap the screen on mobile!</span>
+                    </div>
+                </div>
+                <div class="feature-highlight">
+                    <p>🎯 <strong>Powered by LaunchDarkly</strong></p>
+                    <p>Watch the dino change colors and experience different difficulties!</p>
+                </div>
+                <button class="start-button" onclick="startGameFromOverlay()">
+                    <span class="start-text">🎮 START GAME</span>
+                    <span class="start-hint">or press SPACE</span>
+                </button>
+            </div>
+        </div>
+
         <div class="game-area">
             <canvas id="gameCanvas" width="800" height="200"></canvas>
+            
+            <!-- Floating Instructions (for during gameplay) -->
+            <div class="floating-instructions" id="floatingInstructions">
+                <div class="instruction-bubble">
+                    <span class="bubble-text">Press <kbd>SPACE</kbd> to jump! 🦘</span>
+                </div>
+            </div>
+            
             <div class="game-info">
-                <div class="score">Score: <span id="score">0</span></div>
-                <div class="high-score">High Score: <span id="highScore">0</span></div>
-                <div class="game-status" id="gameStatus">Press SPACE to start</div>
+                <div class="score-container">
+                    <div class="score">
+                        <span class="score-label">Score</span>
+                        <span class="score-value" id="score">0</span>
+                    </div>
+                    <div class="high-score">
+                        <span class="score-label">Best</span>
+                        <span class="score-value" id="highScore">0</span>
+                    </div>
+                </div>
+                <div class="game-status" id="gameStatus">Ready to play!</div>
             </div>
         </div>
         
         <div class="controls">
-            <p>Controls: Press <kbd>SPACE</kbd> to jump</p>
-            <button id="restartBtn" style="display: none;">Restart Game</button>
+            <div class="control-hints">
+                <div class="control-item">
+                    <kbd>SPACE</kbd>
+                    <span>Jump</span>
+                </div>
+                <div class="control-item mobile-only">
+                    <span class="tap-icon">👆</span>
+                    <span>Tap to Jump</span>
+                </div>
+            </div>
+            <button id="restartBtn" class="restart-button" style="display: none;">
+                <span>🔄 Play Again</span>
+            </button>
         </div>
     </div>
 
@@ -49,5 +106,14 @@
     <script src="launchDarklyConfig.js"></script>
     <script src="gameEngine.js"></script>
     <script src="app.js"></script>
+    
+    <!-- UI Helper Functions -->
+    <script>
+        function startGameFromOverlay() {
+            if (window.dinoApp && window.dinoApp.game) {
+                window.dinoApp.game.start();
+            }
+        }
+    </script>
 </body>
 </html> 
