@@ -40,11 +40,108 @@ class DinoGame {
     }
     
     initializeUI() {
-        // Show the start overlay initially
-        this.showStartOverlay();
+        // Check if user has played before and show appropriate overlay
+        this.showAppropriateStartOverlay();
         
         // Set up floating instructions
         this.setupFloatingInstructions();
+        
+        // Set up name input validation
+        this.setupNameInput();
+    }
+    
+    showAppropriateStartOverlay() {
+        if (window.userDetection && window.userDetection.hasPlayedBefore()) {
+            this.showQuickStartOverlay();
+        } else {
+            this.showFullWelcomeOverlay();
+        }
+    }
+    
+    showFullWelcomeOverlay() {
+        const overlay = document.getElementById('gameStartOverlay');
+        const quickOverlay = document.getElementById('quickStartOverlay');
+        
+        if (overlay) overlay.style.display = 'flex';
+        if (quickOverlay) quickOverlay.style.display = 'none';
+    }
+    
+    showQuickStartOverlay() {
+        const overlay = document.getElementById('gameStartOverlay');
+        const quickOverlay = document.getElementById('quickStartOverlay');
+        
+        if (overlay) overlay.style.display = 'none';
+        if (quickOverlay) {
+            quickOverlay.style.display = 'flex';
+            
+            // Update returning player name
+            const playerData = window.userDetection.getPlayerData();
+            const nameElement = document.getElementById('returningPlayerName');
+            if (nameElement && playerData && playerData.name) {
+                nameElement.textContent = playerData.name;
+            }
+        }
+    }
+    
+    setupNameInput() {
+        const nameInput = document.getElementById('playerName');
+        const startButton = document.getElementById('startGameButton');
+        
+        if (nameInput && startButton) {
+            // Enable/disable start button based on name input
+            const validateInput = () => {
+                const name = nameInput.value.trim();
+                if (name.length >= 2) {
+                    startButton.disabled = false;
+                    startButton.style.opacity = '1';
+                } else {
+                    startButton.disabled = false; // Allow anonymous play
+                    startButton.style.opacity = '0.8';
+                }
+            };
+            
+            nameInput.addEventListener('input', validateInput);
+            nameInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    this.startGameFromInput();
+                }
+            });
+            
+            // Initial validation
+            validateInput();
+            
+            // Focus on name input for better UX
+            setTimeout(() => {
+                nameInput.focus();
+            }, 500);
+        }
+    }
+    
+    async startGameFromInput() {
+        const nameInput = document.getElementById('playerName');
+        const playerName = nameInput ? nameInput.value.trim() : '';
+        
+        // Show loading state
+        const startButton = document.getElementById('startGameButton');
+        if (startButton) {
+            startButton.innerHTML = '<span>🔄 Loading...</span>';
+            startButton.disabled = true;
+        }
+        
+        try {
+            // Initialize LaunchDarkly with player name
+            if (window.ldManager && playerName) {
+                await window.ldManager.reinitializeWithUser(playerName);
+            }
+            
+            // Start the game
+            this.start();
+            
+        } catch (error) {
+            console.error('Error starting game:', error);
+            // Still start the game even if LaunchDarkly fails
+            this.start();
+        }
     }
     
     showStartOverlay() {
@@ -56,8 +153,13 @@ class DinoGame {
     
     hideStartOverlay() {
         const overlay = document.getElementById('gameStartOverlay');
+        const quickOverlay = document.getElementById('quickStartOverlay');
+        
         if (overlay) {
             overlay.style.display = 'none';
+        }
+        if (quickOverlay) {
+            quickOverlay.style.display = 'none';
         }
     }
     
@@ -160,9 +262,9 @@ class DinoGame {
             this.updateGameStatus('🎉 New High Score! Amazing!');
         }
         
-        // Show start overlay again after a delay
+        // Show appropriate overlay again after a delay
         setTimeout(() => {
-            this.showStartOverlay();
+            this.showAppropriateStartOverlay();
         }, 2000);
     }
     

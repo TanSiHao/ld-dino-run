@@ -7,7 +7,8 @@ class DinoRunApp {
     
     async init() {
         try {
-            // Initialize LaunchDarkly first
+            // Initialize LaunchDarkly (will be re-initialized with user name later)
+            // For now, initialize without a specific user to get default flags
             await window.ldManager.initialize();
             
             // Create game instance
@@ -21,6 +22,9 @@ class DinoRunApp {
                 this.onFlagsUpdated();
             });
             
+            // Initialize user detection and check for returning players
+            this.setupUserDetection();
+            
             this.isInitialized = true;
             console.log('Dino Run App initialized successfully');
             
@@ -29,6 +33,22 @@ class DinoRunApp {
             // Initialize game with default settings even if LaunchDarkly fails
             this.game = new DinoGame('gameCanvas');
             this.isInitialized = true;
+        }
+    }
+    
+    setupUserDetection() {
+        if (window.userDetection) {
+            const playerData = window.userDetection.getPlayerData();
+            
+            if (playerData) {
+                console.log(`👋 Welcome back, ${playerData.name}!`);
+                console.log(`📊 You've played ${playerData.sessions} times`);
+                
+                // For returning players, we could pre-initialize LaunchDarkly with their saved data
+                // This will happen when they click "Play Again" from the quick start overlay
+            } else {
+                console.log('🎮 First time playing! Welcome to Dino Run!');
+            }
         }
     }
     

@@ -26,7 +26,7 @@ class LaunchDarklyManager {
         this.callbacks = [];
     }
     
-    async initialize() {
+    async initialize(playerName = null) {
         try {
             // Validate configuration
             const isConfigValid = window.DinoRunConfig?.validate() !== false;
@@ -40,20 +40,44 @@ class LaunchDarklyManager {
                 return;
             }
             
-            // Create a user context (you can customize this)
-            const user = {
-                key: 'user-' + Math.random().toString(36).substr(2, 9),
-                name: 'Game Player',
-                email: 'player@example.com',
-                custom: {
-                    project: this.projectName
+            // Generate comprehensive user context
+            let userContext;
+            if (window.userDetection) {
+                console.log('🔍 Detecting user environment...');
+                userContext = await window.userDetection.generateUserContext(playerName);
+                
+                // Save player data for future sessions
+                if (playerName) {
+                    window.userDetection.savePlayerData(userContext);
                 }
-            };
+                
+                console.log('👤 User Context:', {
+                    name: userContext.name,
+                    device: userContext.custom.deviceType,
+                    browser: `${userContext.custom.browserName} ${userContext.custom.browserVersion}`,
+                    os: userContext.custom.operatingSystem,
+                    country: userContext.custom.country,
+                    firstSession: userContext.custom.firstSession
+                });
+            } else {
+                // Fallback user context if userDetection is not available
+                userContext = {
+                    key: 'user-' + Math.random().toString(36).substr(2, 9),
+                    name: playerName || 'Game Player',
+                    email: playerName ? `${playerName.toLowerCase().replace(/\s+/g, '.')}@dino-run.game` : 'player@example.com',
+                    custom: {
+                        project: this.projectName,
+                        gameVersion: '1.0.0'
+                    }
+                };
+            }
             
             console.log(`🚀 Initializing LaunchDarkly for project: ${this.projectName}`);
+            console.log(`👋 Welcome, ${userContext.name}!`);
             
-            // Initialize LaunchDarkly client
-            this.client = LDClient.initialize(this.clientSideId, user);
+            // Initialize LaunchDarkly client with rich user context
+            this.client = LDClient.initialize(this.clientSideId, userContext);
+            this.currentUser = userContext;
             
             // Wait for initialization
             await this.client.waitForInitialization();
@@ -70,6 +94,7 @@ class LaunchDarklyManager {
             console.log('✅ LaunchDarkly initialized successfully');
             console.log(`📋 Project: ${this.projectName}`);
             console.log('🎯 Feature flags:', Object.keys(this.flagKeys));
+            console.log('📊 User attributes tracked:', Object.keys(userContext.custom || {}));
             this.notifyCallbacks();
             
         } catch (error) {
@@ -77,6 +102,48 @@ class LaunchDarklyManager {
             console.log('🎮 Using default values - game will still work!');
             this.isInitialized = true;
             this.notifyCallbacks();
+        }
+    }
+    
+    // Re-initialize with new user context (when name is provided)
+    async reinitializeWithUser(playerName) {
+        if (this.client) {
+            try {
+                await this.client.close();
+            } catch (e) {
+                console.log('Error closing previous client:', e);
+            }
+        }
+        
+        this.isInitialized = false;
+        await this.initialize(playerName);
+    }
+    
+    // Get current user information
+    getCurrentUser() {
+        return this.currentUser;
+    }
+    
+    // Update user context (for dynamic changes)
+    async updateUserContext(updates) {
+        if (!this.client) return;
+        
+        try {
+            const updatedContext = {
+                ...this.currentUser,
+                ...updates,
+                custom: {
+                    ...this.currentUser.custom,
+                    ...updates.custom
+                }
+            };
+            
+            await this.client.identify(updatedContext);
+            this.currentUser = updatedContext;
+            
+            console.log('👤 User context updated:', updates);
+        } catch (error) {
+            console.error('Error updating user context:', error);
         }
     }
     

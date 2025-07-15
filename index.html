@@ -31,7 +31,19 @@
             <div class="start-content">
                 <div class="dino-emoji">🦕</div>
                 <h2>Welcome to Dino Run!</h2>
+                
+                <!-- Player Name Section -->
+                <div class="player-setup">
+                    <h3>👋 Let's get to know you!</h3>
+                    <div class="name-input-container">
+                        <label for="playerName">What's your name?</label>
+                        <input type="text" id="playerName" placeholder="Enter your name" maxlength="30" />
+                        <small>We'll use this to personalize your experience</small>
+                    </div>
+                </div>
+                
                 <div class="start-instructions">
+                    <h3>🎮 How to Play:</h3>
                     <div class="instruction-item">
                         <span class="instruction-icon">🚀</span>
                         <span>Press <kbd>SPACE</kbd> to start running!</span>
@@ -44,15 +56,43 @@
                         <span class="instruction-icon">📱</span>
                         <span>Or tap the screen on mobile!</span>
                     </div>
+                    <div class="instruction-item">
+                        <span class="instruction-icon">🎯</span>
+                        <span>Avoid obstacles and try to beat your high score!</span>
+                    </div>
                 </div>
+                
                 <div class="feature-highlight">
                     <p>🎯 <strong>Powered by LaunchDarkly</strong></p>
+                    <p>Your experience is personalized with feature flags!</p>
                     <p>Watch the dino change colors and experience different difficulties!</p>
                 </div>
-                <button class="start-button" onclick="startGameFromOverlay()">
+                
+                <button class="start-button" onclick="startGameFromOverlay()" id="startGameButton">
                     <span class="start-text">🎮 START GAME</span>
                     <span class="start-hint">or press SPACE</span>
                 </button>
+            </div>
+        </div>
+
+        <!-- Quick Start Overlay (for returning players) -->
+        <div class="quick-start-overlay" id="quickStartOverlay" style="display: none;">
+            <div class="quick-start-content">
+                <div class="welcome-back">
+                    <span class="wave-emoji">👋</span>
+                    <h3>Welcome back, <span id="returningPlayerName">Player</span>!</h3>
+                </div>
+                <button class="quick-start-button" onclick="startGameFromOverlay()">
+                    <span>🎮 PLAY AGAIN</span>
+                </button>
+                <div class="settings-buttons">
+                    <button class="settings-button" onclick="showFullWelcome()">
+                        <span>⚙️ Change Name</span>
+                    </button>
+                    <button class="reset-button" onclick="resetPlayerData()">
+                        <span>🔄 Reset Data</span>
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -103,6 +143,7 @@
     
     <!-- Game Scripts -->
     <script src="config.js"></script>
+    <script src="userDetection.js"></script>
     <script src="launchDarklyConfig.js"></script>
     <script src="gameEngine.js"></script>
     <script src="app.js"></script>
@@ -111,7 +152,38 @@
     <script>
         function startGameFromOverlay() {
             if (window.dinoApp && window.dinoApp.game) {
-                window.dinoApp.game.start();
+                // Check if we're in the full welcome overlay (with name input)
+                const nameInput = document.getElementById('playerName');
+                const overlay = document.getElementById('gameStartOverlay');
+                
+                if (nameInput && overlay && overlay.style.display !== 'none') {
+                    // Use the new method that handles name input
+                    window.dinoApp.game.startGameFromInput();
+                } else {
+                    // Quick start for returning players
+                    window.dinoApp.game.start();
+                }
+            }
+        }
+        
+        function showFullWelcome() {
+            if (window.dinoApp && window.dinoApp.game) {
+                window.dinoApp.game.showFullWelcomeOverlay();
+                
+                // Clear the name input for settings change
+                const nameInput = document.getElementById('playerName');
+                if (nameInput) {
+                    const playerData = window.userDetection?.getPlayerData();
+                    nameInput.value = playerData?.name || '';
+                }
+            }
+        }
+        
+        function resetPlayerData() {
+            if (window.userDetection) {
+                window.userDetection.clearPlayerData();
+                // Reload the page to start fresh
+                location.reload();
             }
         }
     </script>
