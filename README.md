@@ -182,6 +182,17 @@ LaunchDarkly observability provides:
 - **Custom Events**: Track game-specific events for deeper analytics
 - **Performance Monitoring**: Monitor flag evaluation latency and errors
 
+### Package Requirements
+
+**Good news!** Most observability features are **built into the main LaunchDarkly SDK** and require no additional packages:
+
+- ✅ **Custom Event Tracking** - Built into `launchdarkly-js-client-sdk` (already installed)
+- ✅ **Performance Monitoring** - Built into the main SDK
+- ✅ **Flag Evaluation Metrics** - Built into the main SDK
+- 📦 **Session Replay** - Optional separate package: `@launchdarkly/js-client-sdk-session-replay`
+
+**You only need to install additional packages if you want Session Replay functionality.**
+
 ### Implementation Guide
 
 #### 1. Enable Session Replay
@@ -202,15 +213,15 @@ constructor() {
     };
 }
 
-// Add this method to LaunchDarklyManager class
+// Add this method to LaunchDarklyManager class (CDN approach)
 async initializeSessionReplay() {
     if (!this.sessionReplayConfig.enabled) return;
     
     try {
-        // Initialize session replay
-        window.LDSessionReplay = await import('https://unpkg.com/@launchdarkly/js-client-sdk-session-replay@1.0.0/dist/index.js');
+        // Initialize session replay via CDN
+        const module = await import('https://unpkg.com/@launchdarkly/js-client-sdk-session-replay@1.0.0/dist/index.js');
         
-        const sessionReplay = window.LDSessionReplay.createSessionReplay({
+        const sessionReplay = module.createSessionReplay({
             client: this.client,
             sampleRate: this.sessionReplayConfig.sampleRate,
             maskAllInputs: this.sessionReplayConfig.maskAllInputs,
@@ -287,7 +298,9 @@ onFlagChange(flagName, oldValue, newValue) {
 }
 ```
 
-#### 3. Update HTML Script Loading
+#### 3. Choose Your Loading Method
+
+**Option A: CDN Loading (No npm install needed)**
 
 Add the session replay script to your `index.html` file (after the LaunchDarkly SDK):
 
@@ -311,6 +324,49 @@ Add the session replay script to your `index.html` file (after the LaunchDarkly 
         }
     };
 </script>
+```
+
+**Option B: npm Package Approach (Recommended for production)**
+
+1. Install the session replay package:
+```bash
+npm install @launchdarkly/js-client-sdk-session-replay
+```
+
+2. Update your `launchDarklyConfig.js` to import the package:
+```javascript
+// Add this import at the top of launchDarklyConfig.js
+import { createSessionReplay } from '@launchdarkly/js-client-sdk-session-replay';
+
+// Update the initializeSessionReplay method
+async initializeSessionReplay() {
+    if (!this.sessionReplayConfig.enabled) return;
+    
+    try {
+        const sessionReplay = createSessionReplay({
+            client: this.client,
+            sampleRate: this.sessionReplayConfig.sampleRate,
+            maskAllInputs: this.sessionReplayConfig.maskAllInputs,
+            maskAllText: this.sessionReplayConfig.maskAllText,
+        });
+        
+        await sessionReplay.start();
+        console.log('✅ LaunchDarkly Session Replay initialized');
+        
+    } catch (error) {
+        console.warn('⚠️ Session Replay failed to initialize:', error);
+    }
+}
+```
+
+3. If using npm packages, update your `index.html` to use ES modules:
+```html
+<!-- Change your script tags to use type="module" -->
+<script type="module" src="config.js"></script>
+<script type="module" src="userDetection.js"></script>
+<script type="module" src="launchDarklyConfig.js"></script>
+<script type="module" src="gameEngine.js"></script>
+<script type="module" src="app.js"></script>
 ```
 
 #### 4. Initialize Observability Features
