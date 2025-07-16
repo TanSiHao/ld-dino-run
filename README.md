@@ -11,6 +11,7 @@ A browser-based Dino Run game (similar to Chrome's offline game) with LaunchDark
   - 🌤️ **Weather Backgrounds**: Four seasonal backgrounds (spring, summer, autumn, winter)
 - **Responsive Design**: Works on desktop and mobile devices
 - **Local Storage**: Saves high scores locally
+- **Observability Ready**: [Easy setup for LaunchDarkly observability & session replay](#launchdarkly-observability--session-replay)
 
 ## Quick Start
 
@@ -168,6 +169,278 @@ ld-dino-run/
 ### Real-time Updates
 
 The game listens for LaunchDarkly flag changes and applies them immediately without requiring a page refresh. This demonstrates the power of feature flags for real-time configuration changes.
+
+## LaunchDarkly Observability & Session Replay
+
+Enhance your LaunchDarkly implementation with observability and session replay capabilities to gain deeper insights into user behavior and flag performance.
+
+### Overview
+
+LaunchDarkly observability provides:
+- **Real-time Metrics**: Track flag evaluation performance and user interactions
+- **Session Replay**: Record and replay user sessions to understand flag impact
+- **Custom Events**: Track game-specific events for deeper analytics
+- **Performance Monitoring**: Monitor flag evaluation latency and errors
+
+### Implementation Guide
+
+#### 1. Enable Session Replay
+
+Add session replay initialization to your `launchDarklyConfig.js` file:
+
+```javascript
+// Add this to the LaunchDarklyManager constructor
+constructor() {
+    // ... existing code ...
+    
+    // Session Replay Configuration
+    this.sessionReplayConfig = {
+        enabled: true,
+        sampleRate: 0.1, // Record 10% of sessions
+        maskAllInputs: true, // Mask sensitive input data
+        maskAllText: false, // Keep game text visible
+    };
+}
+
+// Add this method to LaunchDarklyManager class
+async initializeSessionReplay() {
+    if (!this.sessionReplayConfig.enabled) return;
+    
+    try {
+        // Initialize session replay
+        window.LDSessionReplay = await import('https://unpkg.com/@launchdarkly/js-client-sdk-session-replay@1.0.0/dist/index.js');
+        
+        const sessionReplay = window.LDSessionReplay.createSessionReplay({
+            client: this.client,
+            sampleRate: this.sessionReplayConfig.sampleRate,
+            maskAllInputs: this.sessionReplayConfig.maskAllInputs,
+            maskAllText: this.sessionReplayConfig.maskAllText,
+        });
+        
+        await sessionReplay.start();
+        console.log('✅ LaunchDarkly Session Replay initialized');
+        
+    } catch (error) {
+        console.warn('⚠️ Session Replay failed to initialize:', error);
+    }
+}
+```
+
+#### 2. Add Custom Event Tracking
+
+Enhance your game with custom event tracking by adding this to `gameEngine.js`:
+
+```javascript
+// Add this method to the DinoGame class
+trackGameEvent(eventName, data = {}) {
+    if (window.ldManager && window.ldManager.client) {
+        try {
+            // Track custom events for observability
+            window.ldManager.client.track(eventName, {
+                ...data,
+                timestamp: new Date().toISOString(),
+                gameVersion: '1.0.0',
+                userAgent: navigator.userAgent,
+                screenResolution: `${window.screen.width}x${window.screen.height}`,
+            });
+            
+            console.log(`📊 Tracked event: ${eventName}`, data);
+        } catch (error) {
+            console.warn('Failed to track event:', error);
+        }
+    }
+}
+
+// Add event tracking to key game actions
+start() {
+    // ... existing start code ...
+    
+    // Track game start
+    this.trackGameEvent('game_started', {
+        dinoColor: window.ldManager?.getDinoColor(),
+        difficulty: window.ldManager?.getDifficulty(),
+        weather: window.ldManager?.getWeather(),
+    });
+}
+
+gameOver() {
+    // ... existing game over code ...
+    
+    // Track game completion
+    this.trackGameEvent('game_completed', {
+        finalScore: this.score,
+        survivalTime: Date.now() - this.gameStartTime,
+        obstaclesCleared: this.obstaclesCleared,
+        dinoColor: window.ldManager?.getDinoColor(),
+        difficulty: window.ldManager?.getDifficulty(),
+    });
+}
+
+// Track flag value changes
+onFlagChange(flagName, oldValue, newValue) {
+    this.trackGameEvent('flag_changed', {
+        flagName,
+        oldValue,
+        newValue,
+        gameState: this.isRunning ? 'playing' : 'stopped',
+    });
+}
+```
+
+#### 3. Update HTML Script Loading
+
+Add the session replay script to your `index.html` file (after the LaunchDarkly SDK):
+
+```html
+<!-- LaunchDarkly SDK -->
+<script src="https://unpkg.com/launchdarkly-js-client-sdk@3.4.0/dist/ldclient.min.js"></script>
+
+<!-- LaunchDarkly Session Replay (Optional) -->
+<script>
+    // Load session replay dynamically when needed
+    window.loadSessionReplay = async function() {
+        try {
+            if (!window.LDSessionReplay) {
+                const module = await import('https://unpkg.com/@launchdarkly/js-client-sdk-session-replay@1.0.0/dist/index.js');
+                window.LDSessionReplay = module;
+            }
+            return window.LDSessionReplay;
+        } catch (error) {
+            console.warn('Session Replay not available:', error);
+            return null;
+        }
+    };
+</script>
+```
+
+#### 4. Initialize Observability Features
+
+Update your `app.js` initialization to include observability:
+
+```javascript
+async init() {
+    try {
+        // ... existing initialization code ...
+        
+        // Initialize LaunchDarkly
+        console.log('🏗️ Initializing LaunchDarkly...');
+        await window.ldManager.initialize();
+        
+        // Initialize observability features
+        console.log('📊 Setting up observability...');
+        await this.setupObservability();
+        
+        // ... rest of initialization ...
+    } catch (error) {
+        console.error('❌ Failed to initialize app:', error);
+    }
+}
+
+async setupObservability() {
+    try {
+        // Initialize session replay if available
+        if (window.ldManager && typeof window.ldManager.initializeSessionReplay === 'function') {
+            await window.ldManager.initializeSessionReplay();
+        }
+        
+        // Set up performance monitoring
+        this.setupPerformanceMonitoring();
+        
+        // Track app initialization
+        if (this.game && typeof this.game.trackGameEvent === 'function') {
+            this.game.trackGameEvent('app_initialized', {
+                loadTime: performance.now(),
+                features: ['feature-flags', 'session-replay', 'custom-events'],
+            });
+        }
+        
+        console.log('✅ Observability features initialized');
+        
+    } catch (error) {
+        console.warn('⚠️ Some observability features failed to initialize:', error);
+    }
+}
+
+setupPerformanceMonitoring() {
+    // Monitor flag evaluation performance
+    if (window.ldManager && window.ldManager.client) {
+        const originalVariation = window.ldManager.client.variation;
+        
+        window.ldManager.client.variation = function(flagKey, defaultValue) {
+            const startTime = performance.now();
+            const result = originalVariation.call(this, flagKey, defaultValue);
+            const endTime = performance.now();
+            
+            console.log(`⏱️ Flag ${flagKey} evaluated in ${(endTime - startTime).toFixed(2)}ms`);
+            return result;
+        };
+    }
+}
+```
+
+#### 5. Environment Configuration
+
+Update your `.env` file to include observability settings:
+
+```bash
+# LaunchDarkly Observability Configuration
+LAUNCHDARKLY_SESSION_REPLAY_ENABLED=true
+LAUNCHDARKLY_SESSION_REPLAY_SAMPLE_RATE=0.1
+LAUNCHDARKLY_CUSTOM_EVENTS_ENABLED=true
+```
+
+And update `config.js` to use these settings:
+
+```javascript
+window.DinoRunConfig = {
+    // ... existing config ...
+    
+    // Observability Configuration
+    observability: {
+        sessionReplay: {
+            enabled: process.env.LAUNCHDARKLY_SESSION_REPLAY_ENABLED === 'true' || true,
+            sampleRate: parseFloat(process.env.LAUNCHDARKLY_SESSION_REPLAY_SAMPLE_RATE) || 0.1,
+        },
+        customEvents: {
+            enabled: process.env.LAUNCHDARKLY_CUSTOM_EVENTS_ENABLED === 'true' || true,
+        }
+    }
+};
+```
+
+### Viewing Observability Data
+
+Once implemented, you can view your observability data in:
+
+1. **LaunchDarkly Dashboard**:
+   - Go to your project dashboard
+   - Navigate to "Insights" → "Events" to see custom events
+   - Check "Debugger" for real-time flag evaluations
+
+2. **Session Replay**:
+   - Access "Session Replay" in your LaunchDarkly dashboard
+   - Filter sessions by user attributes or custom events
+   - Watch recorded sessions to understand user behavior
+
+3. **Custom Metrics**:
+   - View game-specific metrics like completion rates
+   - Analyze flag impact on user engagement
+   - Monitor performance across different flag variations
+
+### Best Practices
+
+- **Privacy**: Always mask sensitive user input in session recordings
+- **Sampling**: Use appropriate sample rates to balance insights with performance
+- **Event Volume**: Track meaningful events without overwhelming your analytics
+- **Performance**: Monitor the impact of observability features on game performance
+- **Data Retention**: Understand LaunchDarkly's data retention policies for your plan
+
+### Troubleshooting Observability
+
+- **Session Replay Not Working**: Check browser compatibility and network connectivity
+- **Events Not Appearing**: Verify custom event tracking code and LaunchDarkly connection
+- **Performance Issues**: Reduce sample rates or disable features if needed
+- **Console Warnings**: Check browser console for specific error messages
 
 ## Development
 
