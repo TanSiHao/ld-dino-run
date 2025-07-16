@@ -217,6 +217,8 @@ npm install @launchdarkly/session-replay
 
 #### Option A: Using Official Observability Plugins (Recommended)
 
+> **📖 Architecture Note**: This project uses **script tags** to load LaunchDarkly, not ES6 modules. The observability plugins are loaded via CDN and accessed through global `window` objects (`window.LDObserve`, `window.LDRecord`).
+
 **Step 1: Install Required Packages**
 ```bash
 # Upgrade SDK and install observability packages
@@ -225,26 +227,62 @@ npm install @launchdarkly/observability
 npm install @launchdarkly/session-replay
 ```
 
-**Step 2: Add Import Statements**
+**Step 2: Add Observability Script Tags**
 
-📁 **File: `launchDarklyConfig.js`** - Add at the **top of the file** (after line 1):
+📁 **File: `index.html`** - Add **AFTER the LaunchDarkly SDK script tag** (around **line 207**):
 
-```javascript
-// LaunchDarkly Configuration with Observability Support
-// NOTE: These imports require SDK v3.7.0+ and observability packages
-// import { initialize } from "launchdarkly-js-client-sdk";
-// import { Observability, LDObserve } from "@launchdarkly/observability";
-// import { SessionReplay, LDRecord } from "@launchdarkly/session-replay";
-
-// Current implementation uses script tags - see index.html for SDK loading
+```html
+    <!-- LaunchDarkly SDK -->
+    <script src="https://unpkg.com/launchdarkly-js-client-sdk@3.8.1/dist/ldclient.min.js"></script>
+    
+    <!-- LaunchDarkly Observability Scripts (ADD THESE) -->
+    <script src="https://unpkg.com/@launchdarkly/observability@latest/dist/observability.min.js"></script>
+    <script src="https://unpkg.com/@launchdarkly/session-replay@latest/dist/session-replay.min.js"></script>
+    
+    <!-- Game Scripts -->
+    <script src="config.js"></script>
 ```
 
-**Step 3: Update LaunchDarkly Initialization**
+> **⚠️ Important**: The observability scripts must be loaded **AFTER** the main LaunchDarkly SDK but **BEFORE** your game scripts.
 
-📁 **File: `launchDarklyConfig.js`** - Replace the initialization code in the `initialize()` method (around **line 70-85**):
+**Alternative: Use Local NPM Packages (Production)**
+
+If you prefer to use local files instead of CDN:
+
+```html
+    <!-- LaunchDarkly Observability Scripts (Local) -->
+    <script src="node_modules/@launchdarkly/observability/dist/observability.min.js"></script>
+    <script src="node_modules/@launchdarkly/session-replay/dist/session-replay.min.js"></script>
+```
+
+**Step 3: Verify Script Loading Order**
+
+Your `index.html` should now have scripts in this exact order:
+
+```html
+    <!-- LaunchDarkly SDK (Base) -->
+    <script src="https://unpkg.com/launchdarkly-js-client-sdk@3.8.1/dist/ldclient.min.js"></script>
+    
+    <!-- LaunchDarkly Observability (Plugins) -->
+    <script src="https://unpkg.com/@launchdarkly/observability@latest/dist/observability.min.js"></script>
+    <script src="https://unpkg.com/@launchdarkly/session-replay@latest/dist/session-replay.min.js"></script>
+    
+    <!-- Game Scripts -->
+    <script src="config.js"></script>
+    <script src="userDetection.js"></script>
+    <script src="launchDarklyConfig.js"></script>
+    <script src="gameEngine.js"></script>
+    <script src="app.js"></script>
+```
+
+**Step 4: Update LaunchDarkly Initialization**
+
+📁 **File: `launchDarklyConfig.js`** - Replace the initialization code in the `initialize()` method (around **line 96**):
 
 ```javascript
-// REPLACE EXISTING: this.client = LDClient.initialize(this.clientSideId, userContext);
+// REPLACE EXISTING: 
+this.client = LDClient.initialize(this.clientSideId, userContext);
+
 // WITH OBSERVABILITY PLUGINS:
 
 this.client = LDClient.initialize(this.clientSideId, userContext, {
@@ -306,7 +344,7 @@ this.client = LDClient.initialize(this.clientSideId, userContext, {
 });
 ```
 
-**Step 4: Add Session Replay Control Methods**
+**Step 6: Add Session Replay Control Methods**
 
 📁 **File: `launchDarklyConfig.js`** - Add these methods **after the `initialize()` method** (around **line 120**):
 
@@ -391,26 +429,7 @@ this.client = LDClient.initialize(this.clientSideId, userContext, {
     }
 ```
 
-**Step 5: Add HTML Script Tags for Observability Packages**
-
-📁 **File: `index.html`** - Add **before the closing `</body>` tag** (around **line 500**):
-
-```html
-    <!-- LaunchDarkly Observability Scripts -->
-    <!-- NOTE: Include these AFTER upgrading to SDK v3.7.0+ -->
-    <!--
-    <script src="https://unpkg.com/@launchdarkly/observability@latest/dist/observability.min.js"></script>
-    <script src="https://unpkg.com/@launchdarkly/session-replay@latest/dist/session-replay.min.js"></script>
-    -->
-    
-    <!-- OR use local npm packages (preferred for production) -->
-    <!--
-    <script src="node_modules/@launchdarkly/observability/dist/observability.min.js"></script>
-    <script src="node_modules/@launchdarkly/session-replay/dist/session-replay.min.js"></script>
-    -->
-```
-
-**Step 6: Update CSP Headers (Content Security Policy)**
+**Step 5: Add Content Security Policy (CSP) Headers**
 
 📁 **File: `index.html`** - Update the CSP meta tag **in the `<head>` section** (around **line 8**):
 
