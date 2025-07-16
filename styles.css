@@ -121,9 +121,8 @@ body::before {
     padding: 8px;
     margin: 8px auto;
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
+    flex-direction: column;
+    align-items: stretch;
     gap: 8px;
     box-shadow: 
         0 4px 12px rgba(0, 0, 0, 0.4),
@@ -148,9 +147,32 @@ body::before {
 .player-details {
     display: flex;
     flex-direction: column;
-    gap: 18px;
+    gap: 12px;
+    width: 100%;
+}
+
+/* Combined row for stats and actions */
+.player-info .player-stats {
+    display: flex;
+    gap: 15px;
+    align-items: center;
     flex: 1;
-    min-width: 250px;
+}
+
+.player-info .player-actions {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+/* Container to hold stats and actions in the same row */
+.player-stats-and-actions {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    flex-wrap: wrap;
 }
 
 .current-player {
@@ -185,9 +207,10 @@ body::before {
 
 .player-stats {
     display: flex;
-    gap: 25px;
+    gap: 15px;
     flex-wrap: wrap;
     align-items: center;
+    flex: 1;
 }
 
 .stat-item {
@@ -224,7 +247,6 @@ body::before {
 .player-actions {
     display: flex;
     gap: 15px;
-    flex-wrap: wrap;
     align-items: center;
 }
 
@@ -350,29 +372,35 @@ body::before {
 
 .game-info {
     display: flex;
-    gap: 35px;
+    gap: 15px;
     align-items: center;
-    flex-wrap: wrap;
     justify-content: center;
-    width: 100%;
+    flex-wrap: wrap;
+    /* Match the game canvas width */
+    width: 800px;
+    max-width: calc(100% - 16px);
+    margin: 0 auto;
 }
 
 .game-status {
-    font-size: 17px;
+    font-size: 15px;
     color: #ffd700;
     font-weight: bold;
     text-align: center;
-    padding: 15px 25px;
+    padding: 8px 15px;
     background: linear-gradient(135deg, rgba(45, 45, 45, 0.9), rgba(26, 26, 26, 0.9));
     border: 2px solid #d4a574;
-    border-radius: 15px;
-    margin-top: 20px;
+    border-radius: 8px;
+    margin: 0;
     box-shadow: 
-        0 8px 20px rgba(0, 0, 0, 0.4),
+        0 4px 12px rgba(0, 0, 0, 0.4),
         inset 0 1px 0 rgba(212, 165, 116, 0.3);
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 0.5px;
     backdrop-filter: blur(5px);
+    max-width: 100%;
+    flex: 1;
+    min-width: 200px;
 }
 
 .controls {
@@ -1015,7 +1043,7 @@ kbd {
     gap: 8px;
     align-items: center;
     justify-content: center;
-    margin-bottom: 6px;
+    margin-bottom: 0;
     flex-wrap: wrap;
 }
 
@@ -1354,19 +1382,22 @@ kbd {
         font-size: 16px;
     }
     
+    .player-stats-and-actions {
+        flex-direction: column;
+        gap: 15px;
+        align-items: center;
+    }
+    
     .player-actions {
+        gap: 10px;
         justify-content: center;
-        width: 100%;
-        flex-wrap: wrap;
-        gap: 8px;
     }
     
     .continue-button, .reset-player-button {
-        flex: 0 1 auto;
-        min-width: 100px;
-        max-width: 45%;
+        width: 100%;
+        max-width: 200px;
         font-size: 12px;
-        padding: 8px 12px;
+        padding: 10px 16px;
         white-space: nowrap;
     }
     
@@ -1534,9 +1565,19 @@ kbd {
         display: flex !important; /* Show when set to flex */
     }
     
+    .game-info {
+        gap: 10px;
+        flex-direction: column;
+        /* Maintain width alignment with game canvas on mobile */
+        width: 100%;
+        max-width: calc(100% - 12px);
+    }
+    
     .game-status {
-        font-size: 15px;
-        padding: 12px 20px;
+        font-size: 13px;
+        padding: 8px 12px;
+        min-width: auto;
+        flex: none;
     }
     
     .restart-button {
@@ -1594,27 +1635,37 @@ kbd {
          min-width: auto;
      }
      
+     .player-stats-and-actions {
+         flex-direction: column;
+         gap: 12px;
+         align-items: center;
+     }
+     
      .player-actions {
-         width: 100%;
+         gap: 8px;
          justify-content: center;
-         flex-direction: row;
-         flex-wrap: wrap;
-         gap: 6px;
      }
      
      .continue-button, .reset-player-button {
-         flex: 0 1 auto;
-         min-width: 80px;
-         max-width: 40%;
+         width: 100%;
+         max-width: 120px;
          font-size: 10px;
          padding: 6px 8px;
          text-transform: none;
          letter-spacing: 0;
      }
     
+         .game-info {
+         gap: 6px;
+         flex-direction: column;
+         /* Maintain width alignment with game canvas on small screens */
+         width: 100%;
+         max-width: calc(100% - 8px);
+     }
+    
     .score-container {
         gap: 6px;
-        margin-bottom: 4px;
+        margin-bottom: 0;
     }
     
     .score, .high-score {
@@ -1629,6 +1680,13 @@ kbd {
     .score-label {
         font-size: 10px;
         margin-bottom: 2px;
+    }
+    
+    .game-status {
+        font-size: 11px;
+        padding: 6px 10px;
+        min-width: auto;
+        flex: none;
     }
     
     #gameCanvas {
