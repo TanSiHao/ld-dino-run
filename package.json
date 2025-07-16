@@ -8,12 +8,19 @@
     "dev": "npm start"
   },
   "dependencies": {
-    "launchdarkly-js-client-sdk": "^3.4.0"
+    "@launchdarkly/observability": "^0.3.5",
+    "@launchdarkly/session-replay": "^0.3.5",
+    "launchdarkly-js-client-sdk": "^3.8.1"
   },
   "devDependencies": {
     "live-server": "^1.2.2"
   },
-  "keywords": ["game", "dino", "launchdarkly", "feature-flags"],
+  "keywords": [
+    "game",
+    "dino",
+    "launchdarkly",
+    "feature-flags"
+  ],
   "author": "",
   "license": "MIT"
-} 
+}
