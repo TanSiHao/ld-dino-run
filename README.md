@@ -191,7 +191,15 @@ LaunchDarkly observability provides:
 - ✅ **Flag Evaluation Metrics** - Built into the main SDK
 - 📦 **Session Replay** - Optional separate package: `@launchdarkly/js-client-sdk-session-replay`
 
-**You only need to install additional packages if you want Session Replay functionality.**
+**Packages you do NOT need to install:**
+- ❌ `@launchdarkly/observability` - **This package does not exist** (observability is built into the main SDK)
+- ❌ `@launchdarkly/session-replay` - **Wrong package name** (correct name includes "js-client-sdk")
+
+**You only need to install additional packages if you want Session Replay functionality:**
+```bash
+# ONLY if you want Session Replay AND prefer npm over CDN
+npm install @launchdarkly/js-client-sdk-session-replay
+```
 
 ### Implementation Guide
 
