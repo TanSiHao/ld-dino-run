@@ -318,6 +318,16 @@ class DinoGame {
         // Reset player position and state
         this.player.reset();
         
+        // 📊 OBSERVABILITY: Track game start event
+        // See README.md "LaunchDarkly Observability & Session Replay" for setup guide
+        if (window.ldManager && window.ldManager.trackGameEvent) {
+            window.ldManager.trackGameEvent('game_started', {
+                difficulty: window.ldManager.getDifficulty(),
+                dinoColor: window.ldManager.getDinoColor(),
+                weather: window.ldManager.getWeather()
+            });
+        }
+        
         // Apply current feature flag settings
         this.applySettings();
         
@@ -370,6 +380,19 @@ class DinoGame {
         
         // Track games played
         this.trackGamePlayed();
+        
+        // 📊 OBSERVABILITY: Track game end event with detailed metrics
+        // See README.md "LaunchDarkly Observability & Session Replay" for setup guide
+        if (window.ldManager && window.ldManager.trackGameEvent) {
+            window.ldManager.trackGameEvent('game_ended', {
+                finalScore: this.score,
+                highScore: this.highScore,
+                newHighScore: this.score > this.highScore,
+                gameDuration: Date.now() - (this.gameStartTime || Date.now()),
+                obstaclesGenerated: this.obstacles.length,
+                frameCount: this.frameCount
+            });
+        }
         
         if (this.score > this.highScore) {
             this.highScore = this.score;

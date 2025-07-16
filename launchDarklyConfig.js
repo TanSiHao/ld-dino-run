@@ -1,4 +1,20 @@
-// LaunchDarkly Configuration
+// LaunchDarkly Configuration with Observability Support
+// 
+// OBSERVABILITY SETUP GUIDE:
+// ==========================
+// 
+// Option A: Full Observability with Session Replay (Requires SDK v3.7.0+)
+// 1. Upgrade SDK: npm install launchdarkly-js-client-sdk@^3.7.0
+// 2. Install plugins: npm install @launchdarkly/observability @launchdarkly/session-replay
+// 3. See README.md "LaunchDarkly Observability & Session Replay" section for detailed setup
+//
+// Option B: Enhanced Event Tracking (Current SDK v3.4.0 - Ready to use!)
+// 1. Use the trackGameEvent() method below (already implemented)
+// 2. Add game event calls in gameEngine.js (see README.md for specific locations)
+// 3. View events in LaunchDarkly Dashboard > Insights > Events
+//
+// 📖 Full Documentation: README.md section "LaunchDarkly Observability & Session Replay"
+
 class LaunchDarklyManager {
     constructor() {
         // Load configuration from config.js
@@ -336,6 +352,144 @@ class LaunchDarklyManager {
             console.log('  4. Project environment not set up correctly');
             return false;
         }
+    }
+
+    // ========================================
+    // ENHANCED OBSERVABILITY METHODS
+    // ========================================
+    // 
+    // These methods provide enhanced event tracking and observability
+    // compatible with the current SDK (v3.4.0+). No upgrade required!
+    //
+    // Usage Examples:
+    // - window.ldManager.trackGameEvent('game_started', {difficulty: 'hard'})
+    // - window.ldManager.trackPerformanceMetric('load_time', 1200, 'ms')
+    // - window.ldManager.trackFlagEvaluation('dino-color', 'blue', 'fallthrough')
+    //
+    // For full observability with session replay, see README.md
+
+    /**
+     * Enhanced game event tracking with detailed metadata
+     * Tracks custom events with comprehensive context information
+     * 
+     * @param {string} eventName - Name of the event (e.g., 'game_started', 'obstacle_hit')
+     * @param {object} eventData - Additional data to include with the event
+     */
+    trackGameEvent(eventName, eventData = {}) {
+        if (this.client && this.isInitialized) {
+            const enhancedData = {
+                ...eventData,
+                
+                // Game session information
+                gameSessionId: this.generateGameSessionId(),
+                sessionStartTime: this.sessionStartTime || Date.now(),
+                
+                // Current flag states for correlation analysis
+                flagStates: {
+                    dinoColor: this.featureFlags.dinoColor,
+                    difficulty: this.featureFlags.difficulty,
+                    weather: this.featureFlags.weather
+                },
+                
+                // Browser and user context
+                userAgent: navigator.userAgent,
+                screenResolution: `${screen.width}x${screen.height}`,
+                viewport: `${window.innerWidth}x${window.innerHeight}`,
+                timestamp: Date.now(),
+                
+                // Game-specific metadata
+                gameMode: 'dino-run',
+                version: '1.0.0',
+                sdkVersion: 'v3.4.0'
+            };
+            
+            // Track the event with LaunchDarkly
+            this.client.track(eventName, enhancedData);
+            console.log(`📊 Enhanced tracking: ${eventName}`, enhancedData);
+            
+            return enhancedData; // Return for further processing if needed
+        } else {
+            console.warn('⚠️ Cannot track event: LaunchDarkly client not initialized');
+            return null;
+        }
+    }
+    
+    /**
+     * Track performance metrics for observability
+     * Useful for monitoring game performance and optimization
+     * 
+     * @param {string} metricName - Name of the metric (e.g., 'frame_rate', 'load_time')
+     * @param {number} value - Numeric value of the metric
+     * @param {string} unit - Unit of measurement (e.g., 'ms', 'fps', 'mb')
+     */
+    trackPerformanceMetric(metricName, value, unit = 'ms') {
+        this.trackGameEvent('performance_metric', {
+            metricName: metricName,
+            value: value,
+            unit: unit,
+            performanceNow: performance.now(),
+            memoryUsage: performance.memory ? {
+                usedJSHeapSize: performance.memory.usedJSHeapSize,
+                totalJSHeapSize: performance.memory.totalJSHeapSize
+            } : null
+        });
+    }
+    
+    /**
+     * Track flag evaluation events for debugging and analysis
+     * Helps understand flag evaluation patterns and troubleshoot issues
+     * 
+     * @param {string} flagKey - The feature flag key
+     * @param {*} value - The evaluated flag value
+     * @param {string} reason - Reason for the evaluation result
+     */
+    trackFlagEvaluation(flagKey, value, reason = 'unknown') {
+        this.trackGameEvent('flag_evaluation', {
+            flagKey: flagKey,
+            flagValue: value,
+            evaluationReason: reason,
+            clientInitialized: this.isInitialized,
+            flagKeys: this.flagKeys // Include all configured flag keys for context
+        });
+    }
+    
+    /**
+     * Generate a unique session ID for tracking user sessions
+     * Persists for the duration of the page session
+     * 
+     * @returns {string} Unique session identifier
+     */
+    generateGameSessionId() {
+        if (!this.gameSessionId) {
+            this.gameSessionId = `dino_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            this.sessionStartTime = Date.now();
+            
+            // Track session start
+            this.trackGameEvent('session_started', {
+                sessionId: this.gameSessionId,
+                referrer: document.referrer,
+                currentUrl: window.location.href
+            });
+        }
+        return this.gameSessionId;
+    }
+    
+    /**
+     * Start enhanced observability session (without requiring SDK upgrade)
+     * Sets up tracking for this session and logs initial context
+     */
+    startObservabilitySession() {
+        const sessionId = this.generateGameSessionId();
+        
+        console.log('🔍 Enhanced observability session started');
+        console.log('📋 Session ID:', sessionId);
+        console.log('🎯 Flag states:', this.featureFlags);
+        console.log('💡 Tip: View events in LaunchDarkly Dashboard > Insights > Events');
+        
+        // Track initial page load
+        this.trackPerformanceMetric('page_load_time', performance.now(), 'ms');
+        
+        return sessionId;
     }
 }
 

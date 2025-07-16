@@ -213,83 +213,401 @@ npm install @launchdarkly/session-replay
 
 ### Implementation Guide
 
+#### Step-by-Step Implementation with Exact File Locations
+
 #### Option A: Using Official Observability Plugins (Recommended)
 
-**Step 1: Upgrade SDK (required for official plugins)**
+**Step 1: Install Required Packages**
 ```bash
+# Upgrade SDK and install observability packages
 npm install launchdarkly-js-client-sdk@^3.7.0
 npm install @launchdarkly/observability
 npm install @launchdarkly/session-replay
 ```
 
-**Step 2: Add to your `launchDarklyConfig.js`:**
+**Step 2: Add Import Statements**
+
+📁 **File: `launchDarklyConfig.js`** - Add at the **top of the file** (after line 1):
+
 ```javascript
-// Import the official plugins
-import { initialize } from "launchdarkly-js-client-sdk";
-import { Observability, LDObserve } from "@launchdarkly/observability";
-import { SessionReplay, LDRecord } from "@launchdarkly/session-replay";
+// LaunchDarkly Configuration with Observability Support
+// NOTE: These imports require SDK v3.7.0+ and observability packages
+// import { initialize } from "launchdarkly-js-client-sdk";
+// import { Observability, LDObserve } from "@launchdarkly/observability";
+// import { SessionReplay, LDRecord } from "@launchdarkly/session-replay";
 
-// Update your LaunchDarklyManager class
-async initialize() {
-    const context = {
-        kind: 'user',
-        key: this.generateUserId(),
-        name: `User-${this.generateUserId()}`
-    };
+// Current implementation uses script tags - see index.html for SDK loading
+```
 
-    // Initialize with plugins
-    this.client = initialize(this.clientSideId, context, {
-        plugins: [
-            new Observability({
-                tracingOrigins: true, // attribute frontend requests to backend domains
-                networkRecording: {
-                    enabled: true,
-                    recordHeadersAndBody: true
+**Step 3: Update LaunchDarkly Initialization**
+
+📁 **File: `launchDarklyConfig.js`** - Replace the initialization code in the `initialize()` method (around **line 70-85**):
+
+```javascript
+// REPLACE EXISTING: this.client = LDClient.initialize(this.clientSideId, userContext);
+// WITH OBSERVABILITY PLUGINS:
+
+this.client = LDClient.initialize(this.clientSideId, userContext, {
+    plugins: [
+        // Observability Plugin Configuration
+        new window.LDObserve({
+            tracingOrigins: true, // Track frontend-to-backend requests
+            networkRecording: {
+                enabled: true,
+                recordHeadersAndBody: true // Capture network traffic details
+            },
+            // Custom event configuration
+            eventCapture: {
+                captureClicks: true,
+                captureFormSubmissions: true,
+                capturePageViews: true
+            }
+        }),
+        
+        // Session Replay Plugin Configuration
+        new window.LDRecord({
+            privacySetting: 'default', // Options: 'none', 'default', 'strict'
+            manualStart: false, // Set to true for manual control
+            
+            // Privacy settings for sensitive data
+            blockSelectors: [
+                'input[type="password"]',
+                '.sensitive-data',
+                '[data-private]'
+            ],
+            
+            // Sample rate (0.1 = 10% of sessions recorded)
+            sampleRate: 0.1,
+            
+            // Maximum session length in minutes
+            maxSessionLength: 30
+        })
+    ],
+    
+    // Enhanced configuration for better observability
+    sendEvents: true,
+    useReport: true,
+    
+    // Optional: Custom event processor for additional analytics
+    eventProcessor: {
+        // Process events before sending to LaunchDarkly
+        processEvent: (event) => {
+            // Add custom metadata to events
+            if (event.kind === 'feature') {
+                event.custom = {
+                    gameSessionId: this.gameSessionId,
+                    timestamp: Date.now(),
+                    gameMode: 'dino-run'
+                };
+            }
+            return event;
+        }
+    }
+});
+```
+
+**Step 4: Add Session Replay Control Methods**
+
+📁 **File: `launchDarklyConfig.js`** - Add these methods **after the `initialize()` method** (around **line 120**):
+
+```javascript
+    // ========================================
+    // OBSERVABILITY & SESSION REPLAY METHODS
+    // ========================================
+    
+    /**
+     * Start a new session replay recording
+     * Call this when you want to begin recording a user session
+     */
+    startSessionReplay(options = {}) {
+        if (window.LDRecord && typeof window.LDRecord.start === 'function') {
+            window.LDRecord.start({
+                forceNew: true, // Start a new recording session
+                silent: false,  // Show console warnings
+                ...options
+            });
+            console.log('🎥 Session replay started');
+            
+            // Track custom event for session start
+            this.trackCustomEvent('session_replay_started', {
+                timestamp: Date.now(),
+                manual_start: true
+            });
+        } else {
+            console.warn('⚠️ Session replay not available. Ensure @launchdarkly/session-replay is installed');
+        }
+    }
+    
+    /**
+     * Stop the current session replay recording
+     * Call this when you want to end the recording
+     */
+    stopSessionReplay() {
+        if (window.LDRecord && typeof window.LDRecord.stop === 'function') {
+            window.LDRecord.stop();
+            console.log('🛑 Session replay stopped');
+            
+            // Track custom event for session stop
+            this.trackCustomEvent('session_replay_stopped', {
+                timestamp: Date.now(),
+                manual_stop: true
+            });
+        } else {
+            console.warn('⚠️ Session replay not available');
+        }
+    }
+    
+    /**
+     * Track custom game events for enhanced observability
+     * @param {string} eventName - Name of the event (e.g., 'game_started', 'obstacle_hit')
+     * @param {object} eventData - Additional data to include with the event
+     */
+    trackGameEvent(eventName, eventData = {}) {
+        if (this.client && this.isInitialized) {
+            const customData = {
+                ...eventData,
+                gameSessionId: this.gameSessionId || this.generateGameSessionId(),
+                timestamp: Date.now(),
+                flagStates: {
+                    dinoColor: this.featureFlags.dinoColor,
+                    difficulty: this.featureFlags.difficulty,
+                    weather: this.featureFlags.weather
                 }
-            }),
-            new SessionReplay({
-                privacySetting: 'none', // or 'default' or 'strict'
-                manualStart: false // set to true for manual control
-            })
-        ]
-    });
+            };
+            
+            this.client.track(eventName, customData);
+            console.log(`📊 Tracked event: ${eventName}`, customData);
+        }
+    }
+    
+    /**
+     * Generate a unique session ID for tracking game sessions
+     */
+    generateGameSessionId() {
+        if (!this.gameSessionId) {
+            this.gameSessionId = `game_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        }
+        return this.gameSessionId;
+    }
+```
 
-    await this.client.waitForInitialization();
-    console.log('LaunchDarkly initialized with observability plugins');
-}
+**Step 5: Add HTML Script Tags for Observability Packages**
 
-// Optional: Manual control of session replay
-startSessionReplay() {
-    LDRecord.start({
-        forceNew: true, // start a new recording session
-        silent: false   // show console warnings
-    });
-}
+📁 **File: `index.html`** - Add **before the closing `</body>` tag** (around **line 500**):
 
-stopSessionReplay() {
-    LDRecord.stop();
-}
+```html
+    <!-- LaunchDarkly Observability Scripts -->
+    <!-- NOTE: Include these AFTER upgrading to SDK v3.7.0+ -->
+    <!--
+    <script src="https://unpkg.com/@launchdarkly/observability@latest/dist/observability.min.js"></script>
+    <script src="https://unpkg.com/@launchdarkly/session-replay@latest/dist/session-replay.min.js"></script>
+    -->
+    
+    <!-- OR use local npm packages (preferred for production) -->
+    <!--
+    <script src="node_modules/@launchdarkly/observability/dist/observability.min.js"></script>
+    <script src="node_modules/@launchdarkly/session-replay/dist/session-replay.min.js"></script>
+    -->
+```
+
+**Step 6: Update CSP Headers (Content Security Policy)**
+
+📁 **File: `index.html`** - Update the CSP meta tag **in the `<head>` section** (around **line 8**):
+
+```html
+<meta http-equiv="Content-Security-Policy" 
+      content="default-src 'self'; 
+               script-src 'self' 'unsafe-inline' https://app.launchdarkly.com https://unpkg.com; 
+               connect-src 'self' https://clientsdk.launchdarkly.com https://events.launchdarkly.com https://pub.observability.app.launchdarkly.com https://otel.observability.app.launchdarkly.com; 
+               worker-src 'self' data: blob:; 
+               style-src 'self' 'unsafe-inline';">
 ```
 
 #### Option B: Using Current SDK (v3.4.0) with Built-in Features
 
-If you prefer to keep the current SDK version, you can still access many observability features:
+If you want to keep the current SDK version, you can still add enhanced observability:
 
-**Built-in Custom Event Tracking:**
+**Enhanced Custom Event Tracking** - No additional packages required!
+
+📁 **File: `launchDarklyConfig.js`** - Add these methods **after the existing methods** (around **line 300**):
+
 ```javascript
-// Track custom game events (already implemented in our project)
-trackGameEvent(eventName, data = {}) {
-    if (this.client) {
-        this.client.track(eventName, data);
-        console.log(`📊 Event tracked: ${eventName}`, data);
+    // ========================================
+    // ENHANCED OBSERVABILITY (SDK v3.4.0+)
+    // ========================================
+    
+    /**
+     * Enhanced game event tracking with detailed metadata
+     * Already compatible with current SDK - no upgrade needed!
+     */
+    trackGameEvent(eventName, eventData = {}) {
+        if (this.client && this.isInitialized) {
+            const enhancedData = {
+                ...eventData,
+                // Game session information
+                gameSessionId: this.generateGameSessionId(),
+                sessionStartTime: this.sessionStartTime || Date.now(),
+                
+                // Current flag states for correlation
+                flagStates: {
+                    dinoColor: this.featureFlags.dinoColor,
+                    difficulty: this.featureFlags.difficulty,
+                    weather: this.featureFlags.weather
+                },
+                
+                // Browser and user context
+                userAgent: navigator.userAgent,
+                screenResolution: `${screen.width}x${screen.height}`,
+                timestamp: Date.now(),
+                
+                // Game-specific metadata
+                gameMode: 'dino-run',
+                version: '1.0.0'
+            };
+            
+            // Track the event with LaunchDarkly
+            this.client.track(eventName, enhancedData);
+            console.log(`📊 Enhanced tracking: ${eventName}`, enhancedData);
+        }
     }
+    
+    /**
+     * Track performance metrics for observability
+     */
+    trackPerformanceMetric(metricName, value, unit = 'ms') {
+        this.trackGameEvent('performance_metric', {
+            metricName: metricName,
+            value: value,
+            unit: unit,
+            performanceNow: performance.now()
+        });
+    }
+    
+    /**
+     * Track flag evaluation for debugging
+     */
+    trackFlagEvaluation(flagKey, value, reason = 'unknown') {
+        this.trackGameEvent('flag_evaluation', {
+            flagKey: flagKey,
+            flagValue: value,
+            evaluationReason: reason,
+            clientInitialized: this.isInitialized
+        });
+    }
+```
+
+**Enhanced Game Event Integration**
+
+📁 **File: `gameEngine.js`** - Add these tracking calls **in the game methods** (specific locations below):
+
+```javascript
+// ADD TO start() method (around line 310)
+start() {
+    if (this.isRunning) return;
+    
+    // Existing start logic...
+    
+    // ADD THIS: Track game start event
+    if (window.ldManager && window.ldManager.trackGameEvent) {
+        window.ldManager.trackGameEvent('game_started', {
+            difficulty: window.ldManager.getDifficulty(),
+            dinoColor: window.ldManager.getDinoColor(),
+            weather: window.ldManager.getWeather()
+        });
+    }
+    
+    // Rest of existing start logic...
 }
 
-// Example usage in game
-this.ldManager.trackGameEvent('game-started', {
-    difficulty: this.difficulty,
-    dinoColor: this.dinoColor,
-    background: this.background
+// ADD TO gameOver() method (around line 400)
+gameOver() {
+    if (!this.isRunning) return;
+    
+    // Existing game over logic...
+    
+    // ADD THIS: Track game completion/failure
+    if (window.ldManager && window.ldManager.trackGameEvent) {
+        window.ldManager.trackGameEvent('game_ended', {
+            finalScore: this.score,
+            highScore: this.highScore,
+            newHighScore: this.score > this.highScore,
+            obstaclesHit: this.obstaclesHit || 0,
+            gameDuration: Date.now() - (this.gameStartTime || Date.now())
+        });
+    }
+    
+    // Rest of existing game over logic...
+}
+
+// ADD TO collision detection (around line 450)
+checkCollisions() {
+    // Existing collision logic...
+    
+    if (/* collision detected */) {
+        // ADD THIS: Track collision event
+        if (window.ldManager && window.ldManager.trackGameEvent) {
+            window.ldManager.trackGameEvent('obstacle_collision', {
+                score: this.score,
+                obstacleType: 'cactus', // or whatever obstacle type
+                gameSpeed: this.gameSpeed
+            });
+        }
+        
+        this.gameOver();
+    }
+}
+```
+
+### Testing Your Observability Setup
+
+After implementing either option, test your setup:
+
+📋 **Console Testing Commands:**
+```javascript
+// Test basic event tracking
+window.ldManager.trackGameEvent('test_event', {message: 'Testing observability'});
+
+// Test performance tracking  
+window.ldManager.trackPerformanceMetric('test_metric', 100, 'ms');
+
+// Test flag evaluation tracking
+window.ldManager.trackFlagEvaluation('dino-color', 'blue', 'test');
+
+// Start enhanced observability session
+window.ldManager.startObservabilitySession();
+
+// Check if methods are available
+console.log('trackGameEvent available:', typeof window.ldManager.trackGameEvent);
+```
+
+🔍 **Verify Events in LaunchDarkly:**
+1. Open LaunchDarkly Dashboard
+2. Navigate to **Insights** → **Events** 
+3. Look for your custom events (may take 1-2 minutes to appear)  
+4. Filter by event name or user context
+
+🎮 **Game Events Automatically Tracked:**
+- `session_started` - When page loads
+- `game_started` - When game begins  
+- `game_ended` - When game ends
+- `performance_metric` - Page load and other metrics
+- `flag_evaluation` - When tracking flag changes
+
+### Summary: What's Already Implemented
+
+✅ **Ready to use (no changes needed):**
+- Enhanced `trackGameEvent()` method in `launchDarklyConfig.js`
+- Game start/end tracking in `gameEngine.js`
+- Performance and flag evaluation tracking
+- Session ID generation and management
+
+⚡ **Quick Start:**
+```javascript
+// The game already tracks events automatically!
+// Just play the game and check LaunchDarkly Dashboard > Insights > Events
+
+// For manual testing, open browser console and run:
+window.ldManager.trackGameEvent('manual_test', {source: 'console'})
 });
 
 this.ldManager.trackGameEvent('obstacle-jumped', {
