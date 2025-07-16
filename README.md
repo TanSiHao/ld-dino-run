@@ -63,7 +63,8 @@ The fastest way to set up LaunchDarkly is using the included Terraform configura
    # Edit terraform.tfvars and add your access token
    # Then run:
    terraform init
-   terraform apply
+   terraform plan   # Review what will be created
+   terraform apply  # Create the resources (type 'yes' when prompted)
    ```
 
 4. **Get your Client-side ID**:

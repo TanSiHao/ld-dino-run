@@ -5,7 +5,7 @@ window.DinoRunConfig = {
     // LaunchDarkly Configuration
     // Replace with your actual client-side ID from .env file
     launchDarkly: {
-        clientSideId: 'YOUR_CLIENT_SIDE_ID_HERE', // Copy from LAUNCHDARKLY_CLIENT_SIDE_ID in .env
+        clientSideId: '687688f23c3dd209424b161a', // ← UPDATE THIS with your 32-character client-side ID
         projectName: 'sihaotan-dino-run', // Copy from LAUNCHDARKLY_PROJECT_NAME in .env
         
         // Feature flag keys - should match your Terraform configuration
@@ -35,9 +35,13 @@ window.DinoRunConfig = {
 window.DinoRunConfig.validate = function() {
     const config = this.launchDarkly;
     
-    if (config.clientSideId === 'YOUR_CLIENT_SIDE_ID_HERE') {
-        console.warn('⚠️  LaunchDarkly client ID not configured. Update config.js with your client-side ID from .env file.');
-        console.warn('📖 See README.md for setup instructions.');
+    // Check if using default/placeholder values
+    if (config.clientSideId === 'YOUR_CLIENT_SIDE_ID_HERE' || 
+        config.clientSideId === 'YOUR_REAL_CLIENT_SIDE_ID_HERE' || 
+        !config.clientSideId) {
+        console.warn('⚠️  LaunchDarkly client ID not configured properly.');
+        console.warn('📖 Current ID:', config.clientSideId);
+        console.warn('💡 Update config.js with your actual client-side ID from LaunchDarkly dashboard.');
         return false;
     }
     
@@ -61,7 +65,7 @@ window.DinoRunConfig.getSetupInstructions = function() {
    - Update projectName if different
 
 4. Optionally use Terraform to create flags:
-   cd terraform && terraform init && terraform apply
+   cd terraform && terraform init && terraform plan && terraform apply
 
 5. Start the game:
    npm start

@@ -1,8 +1,16 @@
 // Game Engine for Dino Run
 class DinoGame {
     constructor(canvasId) {
+        console.log('🎯 DinoGame constructor called with canvasId:', canvasId);
+        
         this.canvas = document.getElementById(canvasId);
+        if (!this.canvas) {
+            console.error('❌ Canvas element not found:', canvasId);
+            return;
+        }
+        
         this.ctx = this.canvas.getContext('2d');
+        console.log('✅ Canvas and context initialized');
         
         // Game state
         this.isRunning = false;
@@ -12,6 +20,7 @@ class DinoGame {
         this.highScore = localStorage.getItem('dinoHighScore') || 0;
         
         // Game objects
+        console.log('🏗️ Creating game objects...');
         this.player = new Player();
         this.obstacles = [];
         this.clouds = [];
@@ -29,14 +38,30 @@ class DinoGame {
             jumpHeight: 90
         };
         
+        console.log('🎮 Calling init...');
         this.init();
     }
     
     init() {
-        this.setupEventListeners();
-        this.updateHighScoreDisplay();
-        this.generateClouds();
-        this.initializeUI();
+        console.log('🔧 DinoGame init starting...');
+        try {
+            this.setupEventListeners();
+            console.log('✅ Event listeners set up');
+            
+            this.updateHighScoreDisplay();
+            console.log('✅ High score display updated');
+            
+            this.generateClouds();
+            console.log('✅ Clouds generated');
+            
+            this.initializeUI();
+            console.log('✅ UI initialized');
+            
+            console.log('🎮 DinoGame initialization complete');
+        } catch (error) {
+            console.error('❌ Error in DinoGame init:', error);
+            console.error('Stack trace:', error.stack);
+        }
     }
     
     initializeUI() {
@@ -48,6 +73,12 @@ class DinoGame {
         
         // Set up name input validation
         this.setupNameInput();
+        
+        // Update player display and show change player button
+        if (typeof updatePlayerDisplay === 'function') {
+            updatePlayerDisplay();
+        }
+        this.updateChangePlayerButtonVisibility();
     }
     
     showAppropriateStartOverlay() {
@@ -91,7 +122,9 @@ class DinoGame {
             // Enable/disable start button based on name input
             const validateInput = () => {
                 const name = nameInput.value.trim();
-                if (name.length >= 2) {
+                // Allow names with spaces - just check if there's meaningful content
+                const hasContent = name.replace(/\s+/g, '').length >= 2;
+                if (hasContent || name.length >= 2) {
                     startButton.disabled = false;
                     startButton.style.opacity = '1';
                 } else {
@@ -129,10 +162,37 @@ class DinoGame {
         }
         
         try {
+            // Save player data immediately if name provided
+            if (playerName && window.userDetection) {
+                console.log('💾 Saving player data for:', playerName);
+                
+                // Create user context and save player data
+                const userContext = await window.userDetection.generateUserContext(playerName);
+                window.userDetection.savePlayerData(userContext);
+                
+                console.log('✅ Player data saved:', window.userDetection.getPlayerData());
+            }
+            
             // Initialize LaunchDarkly with player name
             if (window.ldManager && playerName) {
                 await window.ldManager.reinitializeWithUser(playerName);
             }
+            
+            // Update player display
+            if (typeof updatePlayerDisplay === 'function') {
+                updatePlayerDisplay();
+            }
+            
+            // Update change player button visibility
+            this.updateChangePlayerButtonVisibility();
+            
+            // Add a small delay to ensure UI updates complete
+            setTimeout(() => {
+                if (typeof updatePlayerDisplay === 'function') {
+                    console.log('🔄 Re-updating player display after delay');
+                    updatePlayerDisplay();
+                }
+            }, 100);
             
             // Start the game
             this.start();
@@ -163,6 +223,21 @@ class DinoGame {
         }
     }
     
+    hideAllOverlays() {
+        const overlays = [
+            'gameStartOverlay',
+            'quickStartOverlay', 
+            'nameUpdateModal'
+        ];
+        
+        overlays.forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.style.display = 'none';
+            }
+        });
+    }
+    
     setupFloatingInstructions() {
         this.floatingInstructionsTimer = null;
     }
@@ -176,6 +251,13 @@ class DinoGame {
             setTimeout(() => {
                 instructions.classList.remove('show');
             }, 3000);
+        }
+    }
+    
+    hideFloatingInstructions() {
+        const instructions = document.getElementById('floatingInstructions');
+        if (instructions) {
+            instructions.classList.remove('show');
         }
     }
     
@@ -208,35 +290,66 @@ class DinoGame {
         const overlay = document.getElementById('gameStartOverlay');
         const overlayVisible = overlay && overlay.style.display !== 'none';
         
-        if (!this.isRunning && !this.isPaused) {
+        if (!this.isRunning && !this.isPaused && !overlayVisible) {
+            // Game is over, restart it
+            this.restart();
+        } else if (!this.isRunning && !this.isPaused) {
+            // Game hasn't started yet, start it
             this.start();
         } else if (this.isRunning && this.player.canJump()) {
+            // Game is running, make player jump
             this.player.jump();
         }
     }
     
     start() {
+        if (this.isRunning) return;
+        
+        this.hideAllOverlays();
         this.isRunning = true;
         this.isPaused = false;
         this.score = 0;
         this.obstacles = [];
+        this.clouds = [];
         this.frameCount = 0;
+        this.lastObstacleTime = 0;
+        this.lastCloudTime = 0;
+        
+        // Reset player position and state
         this.player.reset();
-        this.hideStartOverlay();
-        this.updateGameStatus('🏃‍♂️ Running! Jump to avoid obstacles!');
+        
+        // Apply current feature flag settings
+        this.applySettings();
+        
+        // Update UI
         this.updateScore();
-        this.hideRestartButton();
+        this.updateGameStatus('Running! Jump to avoid obstacles! 🦘');
+        this.hideFloatingInstructions();
+        this.showRestartButton(false);
         
-        // Show floating instructions for new players
-        setTimeout(() => {
-            this.showFloatingInstructions();
-        }, 1000);
+        // Update player display
+        if (typeof updatePlayerDisplay === 'function') {
+            updatePlayerDisplay();
+        }
         
+        // Update change player button visibility
+        this.updateChangePlayerButtonVisibility();
+        
+        // Start the game loop
         this.gameLoop();
+        
+        console.log('🎮 Game started!');
     }
     
     restart() {
-        this.start();
+        console.log('🔄 Restarting game...');
+        this.hideRestartButton();
+        this.updateGameStatus('🚀 Restarting...');
+        
+        // Small delay for better UX feedback
+        setTimeout(() => {
+            this.start();
+        }, 300);
     }
     
     pause() {
@@ -252,20 +365,44 @@ class DinoGame {
     
     gameOver() {
         this.isRunning = false;
-        this.updateGameStatus('💥 Game Over! You did great!');
+        this.updateGameStatus('💥 Game Over! Press SPACE or click restart to play again! 🚀');
         this.showRestartButton();
+        
+        // Track games played
+        this.trackGamePlayed();
         
         if (this.score > this.highScore) {
             this.highScore = this.score;
             localStorage.setItem('dinoHighScore', this.highScore);
             this.updateHighScoreDisplay();
-            this.updateGameStatus('🎉 New High Score! Amazing!');
+            this.updateGameStatus('🎉 New High Score! Press SPACE to play again! 🏆');
         }
         
-        // Show appropriate overlay again after a delay
-        setTimeout(() => {
-            this.showAppropriateStartOverlay();
-        }, 2000);
+        // Update player display with new stats
+        if (typeof updatePlayerDisplay === 'function') {
+            updatePlayerDisplay();
+        }
+        
+        // Don't automatically show overlay - let users restart with the restart button
+        // This prevents the annoying popup behavior
+        console.log('🎮 Game over. Use restart button or press SPACE to play again.');
+    }
+    
+    trackGamePlayed() {
+        // Increment games played for current player
+        if (window.userDetection) {
+            const playerData = window.userDetection.getPlayerData();
+            if (playerData) {
+                // Update session count
+                playerData.sessions = (playerData.sessions || 0) + 1;
+                playerData.lastVisit = new Date().toISOString();
+                
+                // Save updated data
+                localStorage.setItem('dinoRunPlayerData', JSON.stringify(playerData));
+                
+                console.log(`📊 Games played updated: ${playerData.sessions}`);
+            }
+        }
     }
     
     gameLoop() {
@@ -385,10 +522,10 @@ class DinoGame {
         }
     }
     
-    showRestartButton() {
+    showRestartButton(show = true) {
         const restartBtn = document.getElementById('restartBtn');
         if (restartBtn) {
-            restartBtn.style.display = 'inline-block';
+            restartBtn.style.display = show ? 'inline-block' : 'none';
         }
     }
     
@@ -399,9 +536,46 @@ class DinoGame {
         }
     }
     
+    applySettings() {
+        // Apply difficulty settings from LaunchDarkly
+        if (window.ldManager && window.ldManager.isInitialized) {
+            const difficultySettings = window.ldManager.getDifficultySettings();
+            this.updateSettings(difficultySettings);
+            
+            // Apply other feature flag settings
+            this.applyWeatherBackground();
+        }
+    }
+    
+    applyWeatherBackground() {
+        // Apply weather background based on feature flag
+        if (window.ldManager && window.ldManager.isInitialized) {
+            const weather = window.ldManager.getWeather();
+            const canvas = document.getElementById('gameCanvas');
+            if (canvas) {
+                // Remove existing weather classes
+                canvas.classList.remove('weather-spring', 'weather-summer', 'weather-autumn', 'weather-winter');
+                // Add current weather class
+                canvas.classList.add(`weather-${weather}`);
+            }
+        }
+    }
+    
     updateSettings(newSettings) {
         this.settings = { ...this.settings, ...newSettings };
         this.player.jumpHeight = this.settings.jumpHeight;
+    }
+    
+    updateChangePlayerButtonVisibility() {
+        const changePlayerBtn = document.getElementById('changePlayerBtn');
+        if (changePlayerBtn && window.userDetection) {
+            const playerData = window.userDetection.getPlayerData();
+            if (playerData && playerData.name) {
+                changePlayerBtn.style.display = 'flex';
+            } else {
+                changePlayerBtn.style.display = 'none';
+            }
+        }
     }
 }
 

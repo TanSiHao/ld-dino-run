@@ -7,30 +7,46 @@ class DinoRunApp {
     
     async init() {
         try {
+            console.log('🔧 Starting DinoRunApp initialization...');
+            
+            // Check if required dependencies are loaded
+            console.log('📋 Checking dependencies...');
+            console.log('- window.ldManager:', !!window.ldManager);
+            console.log('- window.userDetection:', !!window.userDetection);
+            console.log('- DinoGame class:', typeof DinoGame);
+            console.log('- Canvas element:', !!document.getElementById('gameCanvas'));
+            
             // Initialize LaunchDarkly (will be re-initialized with user name later)
             // For now, initialize without a specific user to get default flags
+            console.log('🏗️ Initializing LaunchDarkly...');
             await window.ldManager.initialize();
             
             // Create game instance
+            console.log('🎮 Creating game instance...');
             this.game = new DinoGame('gameCanvas');
             
             // Connect feature flags to game
+            console.log('🔗 Connecting feature flags...');
             this.connectFeatureFlags();
             
             // Set up flag change listeners
+            console.log('👂 Setting up flag listeners...');
             window.ldManager.onFlagsUpdated(() => {
                 this.onFlagsUpdated();
             });
             
             // Initialize user detection and check for returning players
+            console.log('👤 Setting up user detection...');
             this.setupUserDetection();
             
             this.isInitialized = true;
-            console.log('Dino Run App initialized successfully');
+            console.log('✅ Dino Run App initialized successfully');
             
         } catch (error) {
-            console.error('Failed to initialize app:', error);
+            console.error('❌ Failed to initialize app:', error);
+            console.error('Stack trace:', error.stack);
             // Initialize game with default settings even if LaunchDarkly fails
+            console.log('🔄 Falling back to basic game initialization...');
             this.game = new DinoGame('gameCanvas');
             this.isInitialized = true;
         }

@@ -73,14 +73,24 @@ class LaunchDarklyManager {
             }
             
             console.log(`🚀 Initializing LaunchDarkly for project: ${this.projectName}`);
+            console.log('🔑 Client ID:', this.clientSideId);
             console.log(`👋 Welcome, ${userContext.name}!`);
+            console.log('👤 User Context:', userContext);
             
             // Initialize LaunchDarkly client with rich user context
             this.client = LDClient.initialize(this.clientSideId, userContext);
             this.currentUser = userContext;
             
-            // Wait for initialization
-            await this.client.waitForInitialization();
+            // Wait for initialization with timeout
+            const initTimeout = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('LaunchDarkly initialization timeout (10s)')), 10000)
+            );
+            
+            await Promise.race([
+                this.client.waitForInitialization(),
+                initTimeout
+            ]);
+            
             this.isInitialized = true;
             
             // Get initial flag values
@@ -99,6 +109,12 @@ class LaunchDarklyManager {
             
         } catch (error) {
             console.error('❌ LaunchDarkly initialization failed:', error);
+            console.log('🔧 Troubleshooting tips:');
+            console.log('  1. Check your client-side ID in config.js:', this.clientSideId);
+            console.log('  2. Verify the flags exist in your LaunchDarkly project');
+            console.log('  3. Ensure your LaunchDarkly project allows client-side access');
+            console.log('  4. Check browser console for CORS or network errors');
+            console.log('  5. Verify flag keys match:', this.flagKeys);
             console.log('🎮 Using default values - game will still work!');
             this.isInitialized = true;
             this.notifyCallbacks();
@@ -254,6 +270,72 @@ class LaunchDarklyManager {
     
     notifyCallbacks() {
         this.callbacks.forEach(callback => callback());
+    }
+
+    // Simple test function to validate LaunchDarkly setup
+    async testConnection() {
+        console.log('🧪 Testing LaunchDarkly Connection...');
+        console.log('📋 Configuration:');
+        console.log('  Client ID:', this.clientSideId);
+        console.log('  Project:', this.projectName);
+        console.log('  Environment: client-side');
+        
+        // Test if client ID format is valid (should be 32 characters)
+        if (this.clientSideId.length !== 32) {
+            console.error('❌ Invalid client ID format. Should be 32 characters.');
+            console.log('💡 Get your client-side ID from LaunchDarkly dashboard:');
+            console.log('   1. Go to Account Settings → Projects');
+            console.log('   2. Select your project');
+            console.log('   3. Go to Environments');
+            console.log('   4. Copy the Client-side ID (not SDK key)');
+            return false;
+        }
+        
+        // Test if we can create a basic client
+        try {
+            const testUser = {
+                key: 'test-connection-user',
+                name: 'Test User'
+            };
+            
+            console.log('🔗 Attempting to connect...');
+            const testClient = LDClient.initialize(this.clientSideId, testUser);
+            
+            // Wait with shorter timeout for connection test
+            const timeout = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Connection timeout')), 5000)
+            );
+            
+            await Promise.race([
+                testClient.waitForInitialization(),
+                timeout
+            ]);
+            
+            console.log('✅ Connection successful!');
+            
+            // Test flag retrieval
+            console.log('🏁 Testing flags:');
+            Object.entries(this.flagKeys).forEach(([feature, flagKey]) => {
+                try {
+                    const value = testClient.variation(flagKey, this.featureFlags[feature]);
+                    console.log(`  ✅ ${feature} (${flagKey}): ${value}`);
+                } catch (error) {
+                    console.log(`  ❌ ${feature} (${flagKey}): ${error.message}`);
+                }
+            });
+            
+            await testClient.close();
+            return true;
+            
+        } catch (error) {
+            console.error('❌ Connection failed:', error.message);
+            console.log('🔧 Common issues:');
+            console.log('  1. Wrong client-side ID');
+            console.log('  2. Flags don\'t exist in LaunchDarkly');
+            console.log('  3. Network/firewall blocking LaunchDarkly');
+            console.log('  4. Project environment not set up correctly');
+            return false;
+        }
     }
 }
 

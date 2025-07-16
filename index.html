@@ -10,6 +10,38 @@
     <div class="game-container">
         <header class="game-header">
             <h1>🦕 LaunchDarkly Dino Run</h1>
+            
+            <!-- Player Info Section -->
+            <div class="player-info" id="playerInfo" style="display: none;">
+                <div class="player-details">
+                    <div class="current-player">
+                        <span class="player-icon">👤</span>
+                        <span class="player-text">Playing as: </span>
+                        <span class="player-name" id="currentPlayerName">Player</span>
+                    </div>
+                    <div class="player-stats" id="playerStats">
+                        <div class="stat-item">
+                            <span class="stat-icon">🎮</span>
+                            <span class="stat-label">Games:</span>
+                            <span class="stat-value" id="gamesPlayed">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-icon">🏆</span>
+                            <span class="stat-label">Best:</span>
+                            <span class="stat-value" id="playerBestScore">0</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="player-actions">
+                    <button class="continue-button" onclick="continueAsCurrentPlayer()">
+                        <span>✅ Continue</span>
+                    </button>
+                    <button class="reset-player-button" onclick="resetCurrentPlayer()">
+                        <span>🔄 Reset</span>
+                    </button>
+                </div>
+            </div>
+            
             <div class="feature-flags-status">
                 <div class="flag-status" id="dino-color-status">
                     <span class="flag-name">Dino Color:</span>
@@ -96,6 +128,29 @@
             </div>
         </div>
 
+        <!-- Name Update Modal -->
+        <div class="name-update-modal" id="nameUpdateModal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>🔄 Update Your Name</h3>
+                </div>
+                <div class="modal-body">
+                    <p>Enter your new name to continue playing:</p>
+                    <div class="name-update-container">
+                        <input type="text" id="newPlayerName" placeholder="Enter your name" maxlength="30" />
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button class="modal-cancel-button" onclick="cancelNameUpdate()">
+                        <span>❌ Cancel</span>
+                    </button>
+                    <button class="modal-save-button" onclick="saveNameUpdate()" id="saveNameButton">
+                        <span>💾 Save & Continue</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <div class="game-area">
             <canvas id="gameCanvas" width="800" height="200"></canvas>
             
@@ -136,6 +191,14 @@
                 <span>🔄 Play Again</span>
             </button>
         </div>
+        
+        <!-- Change Player Section -->
+        <div class="change-player-section">
+            <button class="change-player-button" onclick="showChangePlayerModal()" id="changePlayerBtn">
+                <span class="change-player-icon">👥</span>
+                <span>Change Player</span>
+            </button>
+        </div>
     </div>
 
     <!-- LaunchDarkly SDK -->
@@ -150,13 +213,33 @@
     
     <!-- UI Helper Functions -->
     <script>
+        console.log('🚀 Loading UI Helper Functions...');
+        
         function startGameFromOverlay() {
+            console.log('🎮 startGameFromOverlay called');
             if (window.dinoApp && window.dinoApp.game) {
                 // Check if we're in the full welcome overlay (with name input)
                 const nameInput = document.getElementById('playerName');
                 const overlay = document.getElementById('gameStartOverlay');
                 
                 if (nameInput && overlay && overlay.style.display !== 'none') {
+                    // Get the player name for immediate display
+                    const playerName = nameInput.value.trim();
+                    console.log('👤 Player name entered:', playerName);
+                    
+                    // If name provided, immediately show player info
+                    if (playerName) {
+                        console.log('⚡ Immediately showing player info for:', playerName);
+                        const playerInfo = document.getElementById('playerInfo');
+                        const playerNameElement = document.getElementById('currentPlayerName');
+                        
+                        if (playerInfo && playerNameElement) {
+                            playerNameElement.textContent = playerName;
+                            playerInfo.style.display = 'block';
+                            console.log('✅ Player info shown immediately');
+                        }
+                    }
+                    
                     // Use the new method that handles name input
                     window.dinoApp.game.startGameFromInput();
                 } else {
@@ -186,6 +269,242 @@
                 location.reload();
             }
         }
+        
+        // Player Management Functions
+        function continueAsCurrentPlayer() {
+            // Simply hide any overlays and continue with current player
+            const overlays = ['gameStartOverlay', 'quickStartOverlay', 'nameUpdateModal'];
+            overlays.forEach(id => {
+                const element = document.getElementById(id);
+                if (element) element.style.display = 'none';
+            });
+            
+            // If game exists and not running, start it
+            if (window.dinoApp && window.dinoApp.game && !window.dinoApp.game.isRunning) {
+                window.dinoApp.game.start();
+            }
+        }
+        
+        function resetCurrentPlayer() {
+            // Show the name update modal
+            const modal = document.getElementById('nameUpdateModal');
+            const nameInput = document.getElementById('newPlayerName');
+            
+            if (modal && nameInput) {
+                // Pre-fill with current name
+                const playerData = window.userDetection?.getPlayerData();
+                nameInput.value = playerData?.name || '';
+                
+                modal.style.display = 'flex';
+                
+                // Focus on input and setup enter key
+                setTimeout(() => {
+                    nameInput.focus();
+                    nameInput.select();
+                }, 100);
+                
+                // Add enter key support
+                nameInput.onkeypress = function(e) {
+                    if (e.key === 'Enter') {
+                        saveNameUpdate();
+                    }
+                };
+            }
+        }
+        
+        function cancelNameUpdate() {
+            const modal = document.getElementById('nameUpdateModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        }
+        
+        async function saveNameUpdate() {
+            const nameInput = document.getElementById('newPlayerName');
+            const saveButton = document.getElementById('saveNameButton');
+            
+            if (!nameInput || !saveButton) return;
+            
+            const newName = nameInput.value.trim();
+            
+            if (newName.length < 2 || newName.replace(/\s+/g, '').length < 1) {
+                alert('Name must be at least 2 characters long (spaces allowed)');
+                nameInput.focus();
+                return;
+            }
+            
+            // Show loading state
+            saveButton.innerHTML = '<span>🔄 Updating...</span>';
+            saveButton.disabled = true;
+            
+            try {
+                // Re-initialize LaunchDarkly with new user name
+                if (window.ldManager) {
+                    await window.ldManager.reinitializeWithUser(newName);
+                }
+                
+                // Update the displayed player name
+                updatePlayerDisplay();
+                
+                // Update change player button visibility
+                if (window.dinoApp && window.dinoApp.game && window.dinoApp.game.updateChangePlayerButtonVisibility) {
+                    window.dinoApp.game.updateChangePlayerButtonVisibility();
+                }
+                
+                // Hide the modal
+                const modal = document.getElementById('nameUpdateModal');
+                if (modal) {
+                    modal.style.display = 'none';
+                }
+                
+                // Show success message
+                const gameStatus = document.getElementById('gameStatus');
+                if (gameStatus) {
+                    const originalText = gameStatus.textContent;
+                    gameStatus.textContent = `✅ Welcome, ${newName}!`;
+                    gameStatus.style.color = '#00b894';
+                    
+                    // Reset after 3 seconds
+                    setTimeout(() => {
+                        gameStatus.textContent = originalText;
+                        gameStatus.style.color = '';
+                    }, 3000);
+                }
+                
+                console.log(`👤 Player name updated to: ${newName}`);
+                
+            } catch (error) {
+                console.error('Error updating player name:', error);
+                alert('Error updating name. Please try again.');
+            } finally {
+                // Reset button state
+                saveButton.innerHTML = '<span>💾 Save & Continue</span>';
+                saveButton.disabled = false;
+            }
+        }
+        
+        // Function to update player display
+        function updatePlayerDisplay() {
+            console.log('🔄 updatePlayerDisplay called');
+            
+            const playerInfo = document.getElementById('playerInfo');
+            const playerNameElement = document.getElementById('currentPlayerName');
+            const gamesPlayedElement = document.getElementById('gamesPlayed');
+            const playerBestScoreElement = document.getElementById('playerBestScore');
+            
+            console.log('📋 Elements found:', {
+                playerInfo: !!playerInfo,
+                playerNameElement: !!playerNameElement,
+                gamesPlayedElement: !!gamesPlayedElement,
+                playerBestScoreElement: !!playerBestScoreElement
+            });
+            
+            if (window.userDetection) {
+                const playerData = window.userDetection.getPlayerData();
+                console.log('👤 Player data retrieved:', playerData);
+                
+                if (playerData && playerData.name && playerInfo && playerNameElement) {
+                    console.log('✅ Updating player display with name:', playerData.name);
+                    
+                    playerNameElement.textContent = playerData.name;
+                    
+                    // Update game statistics
+                    if (gamesPlayedElement) {
+                        gamesPlayedElement.textContent = playerData.sessions || 0;
+                    }
+                    if (playerBestScoreElement) {
+                        const highScore = localStorage.getItem('dinoHighScore') || 0;
+                        playerBestScoreElement.textContent = highScore;
+                    }
+                    
+                    playerInfo.style.display = 'block';
+                    console.log('👁️ Player info section made visible');
+                } else {
+                    console.log('❌ Player data missing or incomplete, hiding player info');
+                    if (playerInfo) {
+                        playerInfo.style.display = 'none';
+                    }
+                }
+            } else {
+                console.log('❌ userDetection not available');
+            }
+        }
+        
+        // Show change player modal
+        function showChangePlayerModal() {
+            const modal = document.getElementById('nameUpdateModal');
+            const nameInput = document.getElementById('newPlayerName');
+            
+            if (modal && nameInput) {
+                // Pre-fill with current name
+                const playerData = window.userDetection?.getPlayerData();
+                nameInput.value = playerData?.name || '';
+                
+                modal.style.display = 'flex';
+                
+                // Focus on input and setup enter key
+                setTimeout(() => {
+                    nameInput.focus();
+                    nameInput.select();
+                }, 100);
+                
+                // Add enter key support
+                nameInput.onkeypress = function(e) {
+                    if (e.key === 'Enter') {
+                        saveNameUpdate();
+                    }
+                };
+            }
+        }
+        
+        // Initialize player display when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            // Update player display after a short delay to allow other scripts to load
+            setTimeout(updatePlayerDisplay, 500);
+            
+            // Add additional check after longer delay
+            setTimeout(() => {
+                console.log('🔍 Final player display check after 2 seconds');
+                updatePlayerDisplay();
+                
+                // Test function to force display (for debugging)
+                window.testPlayerDisplay = function(name) {
+                    console.log('🧪 Test player display with name:', name);
+                    const playerInfo = document.getElementById('playerInfo');
+                    const playerNameElement = document.getElementById('currentPlayerName');
+                    
+                    if (playerInfo && playerNameElement) {
+                        playerNameElement.textContent = name || 'Test Player';
+                        playerInfo.style.display = 'block';
+                        console.log('✅ Test display set');
+                    }
+                };
+                
+                // Debug function for LaunchDarkly flags
+                window.debugLaunchDarkly = function() {
+                    if (window.ldManager) {
+                        window.ldManager.debugStatus();
+                    } else {
+                        console.log('❌ LaunchDarkly manager not found');
+                    }
+                };
+                
+                // Test LaunchDarkly connection
+                window.testLaunchDarkly = async function() {
+                    if (window.ldManager) {
+                        return await window.ldManager.testConnection();
+                    } else {
+                        console.log('❌ LaunchDarkly manager not found');
+                        return false;
+                    }
+                };
+                
+                console.log('💡 Debug commands available:');
+                console.log('  - window.testPlayerDisplay("Name") - Test player display');
+                console.log('  - window.debugLaunchDarkly() - Debug LaunchDarkly flags');
+                console.log('  - window.testLaunchDarkly() - Test LaunchDarkly connection');
+            }, 2000);
+        });
     </script>
 </body>
 </html> 
