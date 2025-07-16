@@ -464,9 +464,8 @@ class DinoGame {
     }
     
     draw() {
-        // Clear canvas
-        this.ctx.fillStyle = window.ldManager ? window.ldManager.getWeatherBackground() : '#87ceeb';
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        // Clear canvas but preserve CSS background
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         
         // Draw clouds
         this.clouds.forEach(cloud => cloud.draw(this.ctx));

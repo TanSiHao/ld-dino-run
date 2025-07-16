@@ -39,8 +39,8 @@ class DinoRunApp {
             console.log('👤 Setting up user detection...');
             this.setupUserDetection();
             
-            this.isInitialized = true;
-            console.log('✅ Dino Run App initialized successfully');
+                    this.isInitialized = true;
+        console.log('✅ Dino Run App initialized successfully');
             
         } catch (error) {
             console.error('❌ Failed to initialize app:', error);
@@ -121,6 +121,8 @@ class DinoRunApp {
         // Add new weather class
         canvas.classList.add(`weather-${weather}`);
         
+        console.log('🌤️ Weather effects applied:', weather);
+        
         // You could add more weather effects here like:
         // - Particle effects (rain, snow)
         // - Different cloud colors
@@ -175,6 +177,8 @@ class DinoRunApp {
         
         console.log(`Would change weather from ${currentWeather} to ${weathers[nextIndex]}`);
     }
+    
+
 }
 
 // Initialize the application when the page loads

@@ -9,50 +9,52 @@
 <body>
     <div class="game-container">
         <header class="game-header">
-            <h1>🦕 LaunchDarkly Dino Run</h1>
+            <h1>▶ LAUNCHDARKLY DINO RUN</h1>
             
             <!-- Player Info Section -->
             <div class="player-info" id="playerInfo" style="display: none;">
                 <div class="player-details">
                     <div class="current-player">
-                        <span class="player-icon">👤</span>
-                        <span class="player-text">Playing as: </span>
+                        <span class="player-icon">█</span>
+                        <span class="player-text">ACTIVE PLAYER: </span>
                         <span class="player-name" id="currentPlayerName">Player</span>
                     </div>
-                    <div class="player-stats" id="playerStats">
-                        <div class="stat-item">
-                            <span class="stat-icon">🎮</span>
-                            <span class="stat-label">Games:</span>
-                            <span class="stat-value" id="gamesPlayed">0</span>
+                    <div class="player-stats-and-actions">
+                        <div class="player-stats" id="playerStats">
+                            <div class="stat-item">
+                                <span class="stat-icon">▬</span>
+                                <span class="stat-label">GAMES:</span>
+                                <span class="stat-value" id="gamesPlayed">0</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-icon">★</span>
+                                <span class="stat-label">BEST:</span>
+                                <span class="stat-value" id="playerBestScore">0</span>
+                            </div>
                         </div>
-                        <div class="stat-item">
-                            <span class="stat-icon">🏆</span>
-                            <span class="stat-label">Best:</span>
-                            <span class="stat-value" id="playerBestScore">0</span>
+                        <div class="player-actions">
+                            <button class="continue-button" onclick="continueAsCurrentPlayer()">
+                                <span>▶ CONTINUE</span>
+                            </button>
+                            <button class="reset-player-button" onclick="resetCurrentPlayer()">
+                                <span>↻ RESET</span>
+                            </button>
                         </div>
                     </div>
-                </div>
-                <div class="player-actions">
-                    <button class="continue-button" onclick="continueAsCurrentPlayer()">
-                        <span>✅ Continue</span>
-                    </button>
-                    <button class="reset-player-button" onclick="resetCurrentPlayer()">
-                        <span>🔄 Reset</span>
-                    </button>
                 </div>
             </div>
             
             <div class="feature-flags-status">
                 <div class="flag-status" id="dino-color-status">
-                    <span class="flag-name">Dino Color:</span>
+                    <span class="flag-name">DINO COLOR:</span>
                     <span class="flag-value" id="dino-color-value">Loading...</span>
                 </div>
                 <div class="flag-status" id="difficulty-status">
-                    <span class="flag-name">Difficulty:</span>
+                    <span class="flag-name">DIFFICULTY:</span>
                     <span class="flag-value" id="difficulty-value">Loading...</span>
                 </div>
                 <div class="flag-status" id="weather-status">
-                    <span class="flag-name">Weather:</span>
+                    <span class="flag-name">WEATHER:</span>
                     <span class="flag-value" id="weather-value">Loading...</span>
                 </div>
             </div>
@@ -61,47 +63,47 @@
         <!-- Game Start Overlay -->
         <div class="game-start-overlay" id="gameStartOverlay">
             <div class="start-content">
-                <div class="dino-emoji">🦕</div>
-                <h2>Welcome to Dino Run!</h2>
+                <div class="dino-emoji">▶</div>
+                <h2>DINO RUN PROTOCOL</h2>
                 
                 <!-- Player Name Section -->
                 <div class="player-setup">
-                    <h3>👋 Let's get to know you!</h3>
+                    <h3>▼ PLAYER IDENTIFICATION</h3>
                     <div class="name-input-container">
-                        <label for="playerName">What's your name?</label>
+                        <label for="playerName">ENTER CALLSIGN:</label>
                         <input type="text" id="playerName" placeholder="Enter your name" maxlength="30" />
-                        <small>We'll use this to personalize your experience</small>
+                        <small>Your identity will be saved for future missions</small>
                     </div>
                 </div>
                 
                 <div class="start-instructions">
-                    <h3>🎮 How to Play:</h3>
+                    <h3>▼ MISSION PARAMETERS:</h3>
                     <div class="instruction-item">
-                        <span class="instruction-icon">🚀</span>
-                        <span>Press <kbd>SPACE</kbd> to start running!</span>
+                        <span class="instruction-icon">▶</span>
+                        <span>Press <kbd>SPACE</kbd> to initialize system</span>
                     </div>
                     <div class="instruction-item">
-                        <span class="instruction-icon">⬆️</span>
-                        <span>Press <kbd>SPACE</kbd> to jump over obstacles</span>
+                        <span class="instruction-icon">↑</span>
+                        <span>Press <kbd>SPACE</kbd> to execute jump protocol</span>
                     </div>
                     <div class="instruction-item">
-                        <span class="instruction-icon">📱</span>
-                        <span>Or tap the screen on mobile!</span>
+                        <span class="instruction-icon">◆</span>
+                        <span>Touch screen to activate mobile interface</span>
                     </div>
                     <div class="instruction-item">
-                        <span class="instruction-icon">🎯</span>
-                        <span>Avoid obstacles and try to beat your high score!</span>
+                        <span class="instruction-icon">●</span>
+                        <span>Avoid obstacles and maximize score output</span>
                     </div>
                 </div>
                 
                 <div class="feature-highlight">
-                    <p>🎯 <strong>Powered by LaunchDarkly</strong></p>
-                    <p>Your experience is personalized with feature flags!</p>
-                    <p>Watch the dino change colors and experience different difficulties!</p>
+                    <p>● <strong>POWERED BY LAUNCHDARKLY</strong></p>
+                    <p>Your experience is optimized with dynamic feature flags</p>
+                    <p>Watch the dino adapt with real-time system updates</p>
                 </div>
                 
                 <button class="start-button" onclick="startGameFromOverlay()" id="startGameButton">
-                    <span class="start-text">🎮 START GAME</span>
+                    <span class="start-text">▶ INITIALIZE</span>
                     <span class="start-hint">or press SPACE</span>
                 </button>
             </div>
@@ -111,18 +113,18 @@
         <div class="quick-start-overlay" id="quickStartOverlay" style="display: none;">
             <div class="quick-start-content">
                 <div class="welcome-back">
-                    <span class="wave-emoji">👋</span>
-                    <h3>Welcome back, <span id="returningPlayerName">Player</span>!</h3>
+                    <span class="wave-emoji">▼</span>
+                    <h3>WELCOME BACK, <span id="returningPlayerName">PLAYER</span></h3>
                 </div>
                 <button class="quick-start-button" onclick="startGameFromOverlay()">
-                    <span>🎮 PLAY AGAIN</span>
+                    <span>▶ MISSION START</span>
                 </button>
                 <div class="settings-buttons">
                     <button class="settings-button" onclick="showFullWelcome()">
-                        <span>⚙️ Change Name</span>
+                        <span>⚙ CHANGE ID</span>
                     </button>
                     <button class="reset-button" onclick="resetPlayerData()">
-                        <span>🔄 Reset Data</span>
+                        <span>↻ RESET DATA</span>
                     </button>
                 </div>
             </div>
@@ -132,47 +134,47 @@
         <div class="name-update-modal" id="nameUpdateModal" style="display: none;">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h3>🔄 Update Your Name</h3>
+                    <h3>↻ UPDATE PLAYER ID</h3>
                 </div>
                 <div class="modal-body">
-                    <p>Enter your new name to continue playing:</p>
+                    <p>Enter new player identification:</p>
                     <div class="name-update-container">
                         <input type="text" id="newPlayerName" placeholder="Enter your name" maxlength="30" />
                     </div>
                 </div>
                 <div class="modal-actions">
                     <button class="modal-cancel-button" onclick="cancelNameUpdate()">
-                        <span>❌ Cancel</span>
+                        <span>✗ CANCEL</span>
                     </button>
                     <button class="modal-save-button" onclick="saveNameUpdate()" id="saveNameButton">
-                        <span>💾 Save & Continue</span>
+                        <span>● SAVE & CONTINUE</span>
                     </button>
                 </div>
             </div>
         </div>
-
+        
         <div class="game-area">
             <canvas id="gameCanvas" width="800" height="200"></canvas>
             
             <!-- Floating Instructions (for during gameplay) -->
             <div class="floating-instructions" id="floatingInstructions">
                 <div class="instruction-bubble">
-                    <span class="bubble-text">Press <kbd>SPACE</kbd> to jump! 🦘</span>
+                    <span class="bubble-text">Press <kbd>SPACE</kbd> to jump ↑</span>
                 </div>
             </div>
             
             <div class="game-info">
                 <div class="score-container">
                     <div class="score">
-                        <span class="score-label">Score</span>
+                        <span class="score-label">SCORE</span>
                         <span class="score-value" id="score">0</span>
                     </div>
                     <div class="high-score">
-                        <span class="score-label">Best</span>
+                        <span class="score-label">BEST</span>
                         <span class="score-value" id="highScore">0</span>
                     </div>
                 </div>
-                <div class="game-status" id="gameStatus">Ready to play!</div>
+                <div class="game-status" id="gameStatus">SYSTEM READY</div>
             </div>
         </div>
         
@@ -180,23 +182,23 @@
             <div class="control-hints">
                 <div class="control-item">
                     <kbd>SPACE</kbd>
-                    <span>Jump</span>
+                    <span>JUMP</span>
                 </div>
                 <div class="control-item mobile-only">
-                    <span class="tap-icon">👆</span>
-                    <span>Tap to Jump</span>
+                    <span class="tap-icon">◆</span>
+                    <span>TAP TO JUMP</span>
                 </div>
             </div>
             <button id="restartBtn" class="restart-button" style="display: none;">
-                <span>🔄 Play Again</span>
+                <span>↻ RESTART MISSION</span>
             </button>
         </div>
         
         <!-- Change Player Section -->
         <div class="change-player-section">
             <button class="change-player-button" onclick="showChangePlayerModal()" id="changePlayerBtn">
-                <span class="change-player-icon">👥</span>
-                <span>Change Player</span>
+                <span class="change-player-icon">█</span>
+                <span>CHANGE PLAYER</span>
             </button>
         </div>
     </div>
