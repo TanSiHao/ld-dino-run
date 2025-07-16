@@ -1,5 +1,5 @@
-// Game Engine for Dino Run
-class DinoGame {
+// Game Engine for Dino Run (ES6 Module)
+export class DinoGame {
     constructor(canvasId) {
         console.log('🎯 DinoGame constructor called with canvasId:', canvasId);
         
@@ -118,6 +118,11 @@ class DinoGame {
         const nameInput = document.getElementById('playerName');
         const startButton = document.getElementById('startGameButton');
         
+        console.log('🔧 Setting up name input:', {
+            nameInput: !!nameInput,
+            startButton: !!startButton
+        });
+        
         if (nameInput && startButton) {
             // Enable/disable start button based on name input
             const validateInput = () => {
@@ -151,14 +156,19 @@ class DinoGame {
     }
     
     async startGameFromInput() {
+        console.log('🚀 startGameFromInput called');
+        
         const nameInput = document.getElementById('playerName');
         const playerName = nameInput ? nameInput.value.trim() : '';
+        const startButton = document.getElementById('startGameButton');
+        
+        console.log('📝 Player name:', playerName || '(no name provided)');
         
         // Show loading state
-        const startButton = document.getElementById('startGameButton');
         if (startButton) {
             startButton.innerHTML = '<span>🔄 Loading...</span>';
             startButton.disabled = true;
+            console.log('🔘 Button set to loading state');
         }
         
         try {
@@ -166,41 +176,85 @@ class DinoGame {
             if (playerName && window.userDetection) {
                 console.log('💾 Saving player data for:', playerName);
                 
-                // Create user context and save player data
-                const userContext = await window.userDetection.generateUserContext(playerName);
-                window.userDetection.savePlayerData(userContext);
-                
-                console.log('✅ Player data saved:', window.userDetection.getPlayerData());
+                try {
+                    const userContext = await window.userDetection.generateUserContext(playerName);
+                    console.log('🔑 Generated user context for saving:', userContext);
+                    
+                    const savedData = window.userDetection.savePlayerData(userContext);
+                    console.log('✅ Player data saved successfully:', savedData);
+                    
+                    // Immediately update player display to show the name
+                    console.log('🔄 Updating player display immediately...');
+                    if (typeof updatePlayerDisplay === 'function') {
+                        updatePlayerDisplay();
+                        console.log('✅ Player display updated immediately');
+                    }
+                    
+                } catch (userError) {
+                    console.warn('⚠️ Failed to save user data:', userError);
+                }
             }
             
-            // Initialize LaunchDarkly with player name
+            // Initialize LaunchDarkly with player name (non-blocking for better UX)
             if (window.ldManager && playerName) {
-                await window.ldManager.reinitializeWithUser(playerName);
-            }
-            
-            // Update player display
-            if (typeof updatePlayerDisplay === 'function') {
-                updatePlayerDisplay();
+                console.log('🚀 Reinitializing LaunchDarkly with user:', playerName);
+                
+                // Do this asynchronously to avoid blocking game start
+                window.ldManager.reinitializeWithUser(playerName).then(() => {
+                    console.log('✅ LaunchDarkly reinitialized with player name');
+                    
+                    // Update player display again after LaunchDarkly is ready
+                    if (typeof updatePlayerDisplay === 'function') {
+                        updatePlayerDisplay();
+                        console.log('✅ Player display updated after LaunchDarkly reinitialization');
+                    }
+                    
+                }).catch(err => {
+                    console.warn('⚠️ LaunchDarkly reinitialization failed, continuing with default flags:', err);
+                });
             }
             
             // Update change player button visibility
-            this.updateChangePlayerButtonVisibility();
+            try {
+                this.updateChangePlayerButtonVisibility();
+                console.log('✅ Change player button visibility updated');
+            } catch (buttonError) {
+                console.warn('⚠️ Failed to update change player button:', buttonError);
+            }
             
-            // Add a small delay to ensure UI updates complete
+            // Small delay for UI to settle, then start
+            console.log('⏳ Brief delay for UI updates...');
             setTimeout(() => {
-                if (typeof updatePlayerDisplay === 'function') {
-                    console.log('🔄 Re-updating player display after delay');
-                    updatePlayerDisplay();
-                }
-            }, 100);
-            
-            // Start the game
-            this.start();
+                console.log('🎮 Starting game now!');
+                this.start();
+            }, 200);
             
         } catch (error) {
-            console.error('Error starting game:', error);
-            // Still start the game even if LaunchDarkly fails
-            this.start();
+            console.error('❌ Error in startGameFromInput:', error);
+            console.error('Stack trace:', error.stack);
+            
+            // Reset button state
+            if (startButton) {
+                startButton.innerHTML = '<span class="start-text">▶ INITIALIZE</span><span class="start-hint">or press SPACE</span>';
+                startButton.disabled = false;
+                console.log('🔘 Button reset after error');
+            }
+            
+            // Still try to start the game
+            console.log('🔄 Attempting to start game despite error...');
+            setTimeout(() => {
+                this.start();
+            }, 100);
+            
+        } finally {
+            // Ensure button is reset after a reasonable delay
+            setTimeout(() => {
+                if (startButton) {
+                    startButton.innerHTML = '<span class="start-text">▶ INITIALIZE</span><span class="start-hint">or press SPACE</span>';
+                    startButton.disabled = false;
+                    console.log('🔘 Button reset in finally block');
+                }
+            }, 2000);
         }
     }
     
@@ -230,10 +284,14 @@ class DinoGame {
             'nameUpdateModal'
         ];
         
+        console.log('👁️ Hiding all overlays...');
         overlays.forEach(id => {
             const element = document.getElementById(id);
             if (element) {
+                console.log(`✅ Hiding overlay: ${id}`);
                 element.style.display = 'none';
+            } else {
+                console.log(`❌ Overlay not found: ${id}`);
             }
         });
     }
@@ -303,9 +361,23 @@ class DinoGame {
     }
     
     start() {
-        if (this.isRunning) return;
+        console.log('🎮 start() method called');
+        console.log('📊 Current game state:', {
+            isRunning: this.isRunning,
+            isPaused: this.isPaused,
+            canvas: !!this.canvas,
+            ctx: !!this.ctx
+        });
         
+        if (this.isRunning) {
+            console.log('⚠️ Game already running, returning early');
+            return;
+        }
+        
+        console.log('👁️ Hiding overlays...');
         this.hideAllOverlays();
+        
+        console.log('🏁 Setting game state to running...');
         this.isRunning = true;
         this.isPaused = false;
         this.score = 0;
@@ -346,9 +418,10 @@ class DinoGame {
         this.updateChangePlayerButtonVisibility();
         
         // Start the game loop
+        console.log('🔄 Starting game loop...');
         this.gameLoop();
         
-        console.log('🎮 Game started!');
+        console.log('🎮 Game started successfully!');
     }
     
     restart() {
@@ -602,7 +675,7 @@ class DinoGame {
 }
 
 // Player class
-class Player {
+export class Player {
     constructor() {
         this.x = 50;
         this.y = 150;
@@ -810,7 +883,7 @@ class Player {
 }
 
 // Obstacle class
-class Obstacle {
+export class Obstacle {
     constructor() {
         this.x = 800;
         this.y = 130;
@@ -834,7 +907,7 @@ class Obstacle {
 }
 
 // Cloud class
-class Cloud {
+export class Cloud {
     constructor(x = 800) {
         this.x = x;
         this.y = 20 + Math.random() * 50;
@@ -863,7 +936,7 @@ class Cloud {
 }
 
 // Ground class
-class Ground {
+export class Ground {
     constructor() {
         this.x = 0;
         this.y = 180;

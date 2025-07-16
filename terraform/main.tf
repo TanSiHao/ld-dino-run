@@ -85,6 +85,12 @@ resource "launchdarkly_feature_flag" "dino_color" {
     off_variation = 0  # Green
   }
 
+  # Enable client-side SDK access (SDKs using Client-side ID)
+  client_side_availability {
+    using_environment_id = true
+    using_mobile_key     = false
+  }
+
   tags = ["game", "ui", "color"]
 }
 
@@ -115,6 +121,12 @@ resource "launchdarkly_feature_flag" "game_difficulty" {
   defaults {
     on_variation  = 1  # Medium
     off_variation = 1  # Medium
+  }
+
+  # Enable client-side SDK access (SDKs using Client-side ID)
+  client_side_availability {
+    using_environment_id = true
+    using_mobile_key     = false
   }
 
   tags = ["game", "difficulty", "gameplay"]
@@ -152,6 +164,12 @@ resource "launchdarkly_feature_flag" "weather_background" {
   defaults {
     on_variation  = 0  # Spring
     off_variation = 0  # Spring
+  }
+
+  # Enable client-side SDK access (SDKs using Client-side ID)
+  client_side_availability {
+    using_environment_id = true
+    using_mobile_key     = false
   }
 
   tags = ["game", "ui", "weather", "theme"]

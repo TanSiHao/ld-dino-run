@@ -11,6 +11,16 @@ This directory contains Terraform configuration to automatically provision Launc
   - `game-difficulty` - Controls game difficulty (3 levels)
   - `weather-background` - Controls seasonal backgrounds (4 seasons)
 
+### Client-Side SDK Configuration
+
+All feature flags are automatically configured with **client-side availability** enabled:
+- ✅ **SDKs using Client-side ID** - Enabled for browser-based JavaScript SDK
+- ❌ **SDKs using Mobile key** - Disabled (not needed for this web game)
+
+This configuration is essential for the Dino Run game because it runs in the browser and uses LaunchDarkly's JavaScript client-side SDK. Without this setting, the flags would not be accessible to the game.
+
+In the LaunchDarkly dashboard, this appears as the "SDKs using Client-side ID" toggle in each flag's configuration.
+
 ## Prerequisites
 
 1. **Terraform installed** (>= 1.0)
@@ -146,6 +156,15 @@ Similar to projects, you can import existing flags:
 ```bash
 terraform import launchdarkly_feature_flag.dino_color project-key/flag-key
 ```
+
+### Client-Side SDK Access Issues
+If the game can't access feature flags, verify:
+1. **Client-side availability** is enabled for each flag
+2. You're using the **Client-side ID** (not SDK key) in your game configuration
+3. The flag is turned ON in your environment
+4. Check browser console for LaunchDarkly connection errors
+
+The Terraform configuration automatically enables client-side access, but if you're using existing flags, you may need to enable this manually in the LaunchDarkly dashboard.
 
 ## Security Notes
 

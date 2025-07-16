@@ -1,5 +1,6 @@
-// Main Application Entry Point
-class DinoRunApp {
+// Main Application Entry Point (ES6 Module)
+// Note: Dependencies are made available globally by main.js
+export class DinoRunApp {
     constructor() {
         this.game = null;
         this.isInitialized = false;
@@ -39,8 +40,11 @@ class DinoRunApp {
             console.log('👤 Setting up user detection...');
             this.setupUserDetection();
             
-                    this.isInitialized = true;
-        console.log('✅ Dino Run App initialized successfully');
+            // Setup keyboard shortcuts
+            this.setupKeyboardShortcuts();
+            
+            this.isInitialized = true;
+            console.log('✅ Dino Run App initialized successfully');
             
         } catch (error) {
             console.error('❌ Failed to initialize app:', error);
@@ -179,48 +183,28 @@ class DinoRunApp {
     }
     
 
+    
+    // Setup development keyboard shortcuts
+    setupKeyboardShortcuts() {
+        document.addEventListener('keydown', (e) => {
+            if (e.altKey) {
+                switch (e.key) {
+                    case '1':
+                        e.preventDefault();
+                        this.cycleDinoColor();
+                        break;
+                    case '2':
+                        e.preventDefault();
+                        this.cycleDifficulty();
+                        break;
+                    case '3':
+                        e.preventDefault();
+                        this.cycleWeather();
+                        break;
+                }
+            }
+        });
+    }
 }
 
-// Initialize the application when the page loads
-document.addEventListener('DOMContentLoaded', async () => {
-    console.log('Initializing LaunchDarkly Dino Run...');
-    
-    const app = new DinoRunApp();
-    await app.init();
-    
-    // Make app globally available for debugging
-    window.dinoApp = app;
-    
-    // Add some helpful console messages
-    console.log('🦕 Welcome to LaunchDarkly Dino Run!');
-    console.log('Press SPACE to start the game');
-    console.log('Feature flags are controlling:');
-    console.log('- Dino color');
-    console.log('- Game difficulty');
-    console.log('- Weather background');
-    console.log('');
-    console.log('To test the app without LaunchDarkly setup:');
-    console.log('1. The game will use default values');
-    console.log('2. Update launchDarklyConfig.js with your client-side ID');
-    console.log('3. Create the feature flags in your LaunchDarkly dashboard');
-});
-
-// Add some keyboard shortcuts for development/testing
-document.addEventListener('keydown', (e) => {
-    if (e.altKey) {
-        switch (e.key) {
-            case '1':
-                e.preventDefault();
-                window.dinoApp?.cycleDinoColor();
-                break;
-            case '2':
-                e.preventDefault();
-                window.dinoApp?.cycleDifficulty();
-                break;
-            case '3':
-                e.preventDefault();
-                window.dinoApp?.cycleWeather();
-                break;
-        }
-    }
-}); 
+// Note: Initialization is now handled by main.js 

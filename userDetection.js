@@ -1,5 +1,5 @@
-// User Detection Utility for LaunchDarkly Context
-class UserDetection {
+// User Detection Utility for LaunchDarkly Context (ES6 Module)
+export class UserDetection {
     constructor() {
         this.userAgent = navigator.userAgent;
         this.platform = navigator.platform;
@@ -181,10 +181,22 @@ class UserDetection {
         const screen = this.getScreenResolution();
         const location = await this.getCountryFromIP();
         
-        // Create a consistent user key
-        const userKey = userName ? 
-            `${userName.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}` : 
-            `anonymous-${this.generateAnonymousId()}`;
+        // Create a consistent user key based on name (without timestamp)
+        let userKey;
+        if (userName) {
+            // Create consistent key for named users (same key for same name)
+            userKey = `player-${userName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}`;
+        } else {
+            // For anonymous users, use a persistent ID stored in localStorage
+            let anonymousId = localStorage.getItem('dino-anonymous-id');
+            if (!anonymousId) {
+                anonymousId = this.generateAnonymousId();
+                localStorage.setItem('dino-anonymous-id', anonymousId);
+            }
+            userKey = `anonymous-${anonymousId}`;
+        }
+        
+        console.log('🔑 Generated user key:', userKey, 'for name:', userName);
         
         return {
             key: userKey,
@@ -242,21 +254,31 @@ class UserDetection {
 
     // Save player data
     savePlayerData(userData) {
+        console.log('💾 Saving player data:', userData);
+        
         const playerData = {
             name: userData.name,
             key: userData.key,
+            email: userData.email || '',
             firstVisit: new Date().toISOString(),
             lastVisit: new Date().toISOString(),
-            sessions: 1
+            sessions: 1,
+            custom: userData.custom || {}
         };
         
+        // Check if player already exists
         const existing = this.getPlayerData();
         if (existing) {
+            // Update existing player data
             playerData.firstVisit = existing.firstVisit;
             playerData.sessions = (existing.sessions || 0) + 1;
+            console.log('📊 Updating existing player, sessions:', playerData.sessions);
+        } else {
+            console.log('🆕 Creating new player data');
         }
         
         localStorage.setItem('dinoRunPlayerData', JSON.stringify(playerData));
+        console.log('✅ Player data saved successfully:', playerData);
         return playerData;
     }
 
@@ -264,8 +286,11 @@ class UserDetection {
     getPlayerData() {
         try {
             const data = localStorage.getItem('dinoRunPlayerData');
-            return data ? JSON.parse(data) : null;
+            const playerData = data ? JSON.parse(data) : null;
+            console.log('📋 Retrieved player data:', playerData);
+            return playerData;
         } catch (e) {
+            console.error('❌ Error retrieving player data:', e);
             return null;
         }
     }
@@ -276,5 +301,4 @@ class UserDetection {
     }
 }
 
-// Create global instance
-window.userDetection = new UserDetection(); 
+// Note: Global instance will be created in main.js 

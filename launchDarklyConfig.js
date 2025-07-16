@@ -1,23 +1,17 @@
-// LaunchDarkly Configuration with Observability Support
+// LaunchDarkly Configuration with Observability Support (ES6 Module)
 // 
-// OBSERVABILITY SETUP GUIDE:
-// ==========================
+// OBSERVABILITY SETUP:
+// ===================
 // 
-// Option A: Full Observability with Session Replay (Requires SDK v3.7.0+)
-// 1. Upgrade SDK: npm install launchdarkly-js-client-sdk@^3.7.0
-// 2. Install plugins: npm install @launchdarkly/observability @launchdarkly/session-replay
-// 3. See README.md "LaunchDarkly Observability & Session Replay" section for detailed setup
-//
-// Option B: Enhanced Event Tracking (Current SDK v3.4.0 - Ready to use!)
-// 1. Use the trackGameEvent() method below (already implemented)
-// 2. Add game event calls in gameEngine.js (see README.md for specific locations)
-// 3. View events in LaunchDarkly Dashboard > Insights > Events
+// ✅ ES6 Module Architecture with Official LaunchDarkly Imports
+// ✅ LaunchDarkly SDK v3.8.1 with Observability & Session Replay
+// ✅ Official import statements for better tree shaking and module management
 //
 // 📖 Full Documentation: README.md section "LaunchDarkly Observability & Session Replay"
 
-class LaunchDarklyManager {
+export class LaunchDarklyManager {
     constructor() {
-        // Load configuration from config.js
+        // Load configuration from config.js (available via main.js)
         const config = window.DinoRunConfig || {};
         
         this.clientSideId = config.launchDarkly?.clientSideId || 'YOUR_CLIENT_SIDE_ID_HERE';
@@ -93,9 +87,92 @@ class LaunchDarklyManager {
             console.log(`👋 Welcome, ${userContext.name}!`);
             console.log('👤 User Context:', userContext);
             
-            // Initialize LaunchDarkly client with rich user context
-            this.client = LDClient.initialize(this.clientSideId, userContext);
+            // Store the current user context before client creation
             this.currentUser = userContext;
+            console.log('💾 User context stored for reference');
+            
+            // Initialize LaunchDarkly client with observability plugins (ES6 modules)
+            console.log('🔍 Checking observability plugin availability...');
+            console.log('- window.LDClient:', typeof window.LDClient);
+            console.log('- window.LDObserve:', typeof window.LDObserve);
+            console.log('- window.LDRecord:', typeof window.LDRecord);
+            
+            // Check if observability plugins are available
+            const hasObservabilityPlugins = window.LDObserve && window.LDRecord;
+            
+            if (hasObservabilityPlugins) {
+                console.log('✅ Observability plugins found, initializing with full features...');
+                try {
+                    this.client = window.LDClient.initialize(this.clientSideId, userContext, {
+                        plugins: [
+                            // Observability Plugin Configuration
+                            new window.LDObserve({
+                                tracingOrigins: true, // Track frontend-to-backend requests
+                                networkRecording: {
+                                    enabled: true,
+                                    recordHeadersAndBody: true // Capture network traffic details
+                                },
+                                // Custom event configuration
+                                eventCapture: {
+                                    captureClicks: true,
+                                    captureFormSubmissions: true,
+                                    capturePageViews: true
+                                }
+                            }),
+                            
+                            // Session Replay Plugin Configuration
+                            new window.LDRecord({
+                                privacySetting: 'default', // Options: 'none', 'default', 'strict'
+                                manualStart: false, // Set to true for manual control
+                                
+                                // Privacy settings for sensitive data
+                                blockSelectors: [
+                                    'input[type="password"]',
+                                    '.sensitive-data',
+                                    '[data-private]'
+                                ],
+                                
+                                // Sample rate (1 = 100% of sessions recorded)
+                                sampleRate: 1,
+                                
+                                // Maximum session length in minutes
+                                maxSessionLength: 30
+                            })
+                        ],
+                        
+                        // Enhanced configuration for better observability
+                        sendEvents: true,
+                        useReport: true,
+                        
+                        // Optional: Custom event processor for additional analytics
+                        eventProcessor: {
+                            // Process events before sending to LaunchDarkly
+                            processEvent: (event) => {
+                                // Add custom metadata to events
+                                if (event.kind === 'feature') {
+                                    event.custom = {
+                                        gameSessionId: this.gameSessionId,
+                                        timestamp: Date.now(),
+                                        gameMode: 'dino-run'
+                                    };
+                                }
+                                return event;
+                            }
+                        }
+                    });
+                    console.log('🎥 LaunchDarkly initialized with observability plugins');
+                } catch (pluginError) {
+                    console.warn('⚠️ Failed to initialize with observability plugins:', pluginError);
+                    console.log('🔄 Falling back to standard initialization...');
+                    // Fallback to standard initialization
+                    this.client = window.LDClient.initialize(this.clientSideId, userContext);
+                }
+            } else {
+                console.log('ℹ️ Observability plugins not available, using standard initialization');
+                console.log('💡 Ensure main.js has loaded and set window.LDObserve and window.LDRecord');
+                // Standard initialization without plugins
+                this.client = window.LDClient.initialize(this.clientSideId, userContext);
+            }
             
             // Wait for initialization with timeout
             const initTimeout = new Promise((_, reject) => 
@@ -139,16 +216,40 @@ class LaunchDarklyManager {
     
     // Re-initialize with new user context (when name is provided)
     async reinitializeWithUser(playerName) {
+        console.log('🔄 Reinitializing LaunchDarkly with user:', playerName);
+        
         if (this.client) {
             try {
+                console.log('📴 Closing existing LaunchDarkly client...');
                 await this.client.close();
+                console.log('✅ Previous client closed');
             } catch (e) {
-                console.log('Error closing previous client:', e);
+                console.log('⚠️ Error closing previous client:', e);
             }
         }
         
+        // Clear current state
         this.isInitialized = false;
+        this.client = null;
+        this.currentUser = null;
+        
+        console.log('🚀 Starting fresh initialization with player name...');
         await this.initialize(playerName);
+        
+        // Verify the user was set correctly
+        if (this.currentUser) {
+            console.log('✅ LaunchDarkly reinitialized successfully');
+            console.log('👤 Current user context:', {
+                key: this.currentUser.key,
+                name: this.currentUser.name,
+                email: this.currentUser.email
+            });
+            
+            // Trigger flag update to ensure all UI elements are updated
+            this.updateAllFlags();
+        } else {
+            console.error('❌ Failed to set user context after reinitialization');
+        }
     }
     
     // Get current user information
@@ -315,7 +416,7 @@ class LaunchDarklyManager {
             };
             
             console.log('🔗 Attempting to connect...');
-            const testClient = LDClient.initialize(this.clientSideId, testUser);
+            const testClient = window.LDClient.initialize(this.clientSideId, testUser);
             
             // Wait with shorter timeout for connection test
             const timeout = new Promise((_, reject) => 

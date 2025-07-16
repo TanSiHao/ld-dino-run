@@ -18,15 +18,15 @@ body {
     font-family: 'Arial', sans-serif;
     background: linear-gradient(135deg, #001122 0%, #003366 50%, #0066cc 100%);
     background-attachment: fixed;
-    height: 100vh;
+    min-height: 100vh;
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: center;
     color: #ffffff;
     position: relative;
     padding: 2px;
     margin: 0;
-    overflow: hidden;
+    overflow-x: hidden;
     box-sizing: border-box;
 }
 
@@ -38,11 +38,10 @@ body {
     padding: 8px;
     max-width: calc(100vw - 4px);
     width: 100%;
-    max-height: calc(100vh - 4px);
+    min-height: calc(100vh - 4px);
     margin: 0 auto;
     position: relative;
     box-sizing: border-box;
-    overflow-y: auto;
     overflow-x: hidden;
 }
 
@@ -425,6 +424,9 @@ kbd {
     justify-content: center;
     z-index: 1000;
     animation: fadeIn 0.5s ease-in;
+    padding: 20px;
+    box-sizing: border-box;
+    overflow-y: auto;
 }
 
 .start-content {
@@ -437,6 +439,7 @@ kbd {
     max-width: 550px;
     animation: slideUp 0.6s ease-out;
     position: relative;
+    box-sizing: border-box;
 }
 
 /* Improved dino emoji for start screen */
@@ -463,6 +466,12 @@ kbd {
     background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
+    /* Improved text wrapping for better fit */
+    word-break: break-word;
+    line-height: 1.2;
+    /* Ensure title never exceeds container width */
+    max-width: 100%;
+    overflow-wrap: break-word;
 }
 
 .start-instructions {
@@ -666,6 +675,9 @@ kbd {
     justify-content: center;
     z-index: 1000;
     animation: fadeIn 0.5s ease-in;
+    padding: 20px;
+    box-sizing: border-box;
+    overflow-y: auto;
 }
 
 .quick-start-content {
@@ -676,7 +688,10 @@ kbd {
     border-radius: 0px;
     box-shadow: 0 25px 50px rgba(0, 170, 255, 0.6);
     max-width: 450px;
+    max-height: 90vh;
     animation: slideUp 0.6s ease-out;
+    overflow-y: auto;
+    box-sizing: border-box;
 }
 
 .welcome-back {
@@ -813,11 +828,14 @@ kbd {
     border-radius: 0px;
     padding: 35px;
     max-width: 500px;
+    max-height: 90vh;
     width: 90%;
     box-shadow: 0 25px 50px rgba(0, 170, 255, 0.6);
     animation: slideUp 0.4s ease-out;
     text-align: center;
     position: relative;
+    overflow-y: auto;
+    box-sizing: border-box;
 }
 
 /* Modal improvements */
@@ -1442,6 +1460,7 @@ kbd {
     .start-content h2 {
         font-size: 1.8rem;
         letter-spacing: 1px;
+        margin-bottom: 20px;
     }
     
     .instruction-item {
@@ -1555,10 +1574,57 @@ kbd {
     }
 }
 
+/* Better intermediate sizing for large tablets and small laptops */
+@media (max-width: 1200px) {
+    .start-content h2 {
+        font-size: 2rem;
+        letter-spacing: 2px;
+    }
+}
+
+/* Better sizing for medium tablets */
+@media (max-width: 1024px) {
+    .start-content h2 {
+        font-size: 1.9rem;
+        letter-spacing: 1.5px;
+    }
+}
+
+/* Tablet screens */
+@media (max-width: 900px) {
+    .start-content, .quick-start-content, .modal-content {
+        padding: 30px 25px;
+        margin: 15px;
+        max-width: calc(100vw - 30px);
+        width: 85%;
+    }
+}
+
+/* Medium mobile screens */
+@media (max-width: 600px) {
+    .start-content, .quick-start-content, .modal-content {
+        padding: 20px;
+        margin: 8px;
+        max-width: calc(100vw - 16px);
+        width: 92%;
+    }
+    
+    .start-content h2, .quick-start-content h3 {
+        font-size: 1.4rem;
+        margin-bottom: 12px;
+    }
+    
+    .dino-emoji, .wave-emoji {
+        font-size: 2.5rem;
+        margin-bottom: 10px;
+    }
+}
+
 @media (max-width: 480px) {
     body {
         padding: 0;
         margin: 0;
+        align-items: flex-start;
     }
     
     .game-container {
@@ -1659,7 +1725,7 @@ kbd {
     #gameCanvas {
         width: 100%;
         max-width: calc(100% - 8px);
-        height: 100px;
+        height: 120px;
         border-width: 1px;
         border-radius: 6px;
         margin-bottom: 4px;
@@ -1696,17 +1762,19 @@ kbd {
     }
     
     .start-content, .quick-start-content, .modal-content {
-        padding: 10px;
-        margin: 2px;
+        padding: 15px;
+        margin: 10px;
         border-radius: 8px;
-        max-width: calc(100vw - 4px);
-        max-height: calc(100vh - 4px);
-        overflow-y: auto;
+        max-width: calc(100vw - 20px);
+        width: 90%;
+        box-sizing: border-box;
     }
     
     .start-content h2, .quick-start-content h3 {
-        font-size: 1.2rem;
+        font-size: 1.1rem;
         margin-bottom: 8px;
+        letter-spacing: 0.5px;
+        line-height: 1.1;
     }
     
     .dino-emoji, .wave-emoji {
@@ -1727,6 +1795,15 @@ kbd {
 }
 
 @media (max-width: 360px) {
+    .start-content h2, .quick-start-content h3 {
+        font-size: 0.95rem;
+        letter-spacing: 0px;
+        margin-bottom: 6px;
+        /* Allow text to wrap on multiple lines for very long titles */
+        word-break: break-word;
+        hyphens: auto;
+    }
+    
     .game-container {
         padding: 2px;
         border-radius: 4px;
@@ -1747,6 +1824,24 @@ kbd {
         max-width: calc(100% - 4px);
     }
     
+    .start-content, .quick-start-content, .modal-content {
+        padding: 12px;
+        margin: 5px;
+        max-width: calc(100vw - 10px);
+        max-height: calc(100vh - 20px);
+        width: 95%;
+    }
+    
+    .start-content h2, .quick-start-content h3 {
+        font-size: 1rem;
+        margin-bottom: 6px;
+    }
+    
+    .dino-emoji, .wave-emoji {
+        font-size: 1.5rem;
+        margin-bottom: 6px;
+    }
+    
     .score, .high-score {
         padding: 2px 6px;
         min-width: 35px;
@@ -1759,4 +1854,16 @@ kbd {
     .score-label {
         font-size: 8px;
     }
-} 
+}
+
+/* Ultra-compact for very small screens */
+@media (max-width: 320px) {
+    .start-content h2 {
+        font-size: 0.9rem;
+        letter-spacing: 0px;
+        margin-bottom: 4px;
+        line-height: 1.0;
+        /* Ultra-compact text settings */
+        word-spacing: -0.5px;
+    }
+}

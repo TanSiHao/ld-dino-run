@@ -2,7 +2,8 @@
   "name": "ld-dino-run",
   "version": "1.0.0",
   "description": "A Dino Run game with LaunchDarkly feature flags",
-  "main": "index.html",
+  "type": "module",
+  "main": "main.js",
   "scripts": {
     "start": "npx live-server --port=3000 --open=/index.html",
     "dev": "npm start"

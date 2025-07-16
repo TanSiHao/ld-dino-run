@@ -1,7 +1,7 @@
-// Configuration file for LaunchDarkly Dino Run
+// Configuration file for LaunchDarkly Dino Run (ES6 Module)
 // Update these values based on your .env file
 
-window.DinoRunConfig = {
+export const DinoRunConfig = {
     // LaunchDarkly Configuration
     // Replace with your actual client-side ID from .env file
     launchDarkly: {
@@ -32,7 +32,7 @@ window.DinoRunConfig = {
 };
 
 // Validation helper
-window.DinoRunConfig.validate = function() {
+DinoRunConfig.validate = function() {
     const config = this.launchDarkly;
     
     // Check if using default/placeholder values
@@ -49,7 +49,7 @@ window.DinoRunConfig.validate = function() {
 };
 
 // Helper to get environment-specific instructions
-window.DinoRunConfig.getSetupInstructions = function() {
+DinoRunConfig.getSetupInstructions = function() {
     return `
 🔧 Setup Instructions:
 

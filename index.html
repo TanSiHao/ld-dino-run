@@ -203,15 +203,15 @@
         </div>
     </div>
 
-    <!-- LaunchDarkly SDK -->
+    <!-- LaunchDarkly SDK via CDN -->
     <script src="https://unpkg.com/launchdarkly-js-client-sdk@3.8.1/dist/ldclient.min.js"></script>
     
-    <!-- Game Scripts -->
-    <script src="config.js"></script>
-    <script src="userDetection.js"></script>
-    <script src="launchDarklyConfig.js"></script>
-    <script src="gameEngine.js"></script>
-    <script src="app.js"></script>
+    <!-- LaunchDarkly Observability Plugins -->
+    <script src="https://unpkg.com/@launchdarkly/observability@latest/dist/observability.min.js"></script>
+    <script src="https://unpkg.com/@launchdarkly/session-replay@latest/dist/session-replay.min.js"></script>
+    
+    <!-- ES6 Module Entry Point -->
+    <script type="module" src="main.js"></script>
     
     <!-- UI Helper Functions -->
     <script>
@@ -219,7 +219,31 @@
         
         function startGameFromOverlay() {
             console.log('🎮 startGameFromOverlay called');
-            if (window.dinoApp && window.dinoApp.game) {
+            console.log('🔍 Debugging game state:', {
+                'window.dinoApp': !!window.dinoApp,
+                'window.dinoApp.game': !!(window.dinoApp && window.dinoApp.game),
+                'window.dinoApp.isInitialized': window.dinoApp ? window.dinoApp.isInitialized : 'N/A'
+            });
+            
+            if (!window.appReady) {
+                console.warn('⏳ App not ready yet, waiting...');
+                alert('Game is still loading. Please wait a moment and try again.');
+                return;
+            }
+            
+            if (!window.dinoApp) {
+                console.error('❌ window.dinoApp not available! App may not be initialized yet.');
+                alert('Game initialization failed. Please refresh the page and try again.');
+                return;
+            }
+            
+            if (!window.dinoApp.game) {
+                console.error('❌ window.dinoApp.game not available! Game instance not created.');
+                alert('Game engine not ready. Please refresh the page and try again.');
+                return;
+            }
+            
+            try {
                 // Check if we're in the full welcome overlay (with name input)
                 const nameInput = document.getElementById('playerName');
                 const overlay = document.getElementById('gameStartOverlay');
@@ -229,9 +253,11 @@
                     const playerName = nameInput.value.trim();
                     console.log('👤 Player name entered:', playerName);
                     
-                    // If name provided, immediately show player info
+                    // If name provided, immediately show player info and save data
                     if (playerName) {
-                        console.log('⚡ Immediately showing player info for:', playerName);
+                        console.log('⚡ Immediately processing player data for:', playerName);
+                        
+                        // Show player info immediately for better UX
                         const playerInfo = document.getElementById('playerInfo');
                         const playerNameElement = document.getElementById('currentPlayerName');
                         
@@ -240,14 +266,34 @@
                             playerInfo.style.display = 'block';
                             console.log('✅ Player info shown immediately');
                         }
+                        
+                        // Save player data immediately using userDetection
+                        if (window.userDetection) {
+                            console.log('💾 Generating and saving user context...');
+                            window.userDetection.generateUserContext(playerName).then(userContext => {
+                                console.log('🔑 Generated user context:', userContext);
+                                window.userDetection.savePlayerData(userContext);
+                                console.log('✅ Player data saved');
+                                
+                                // Update display again to ensure consistency
+                                updatePlayerDisplay();
+                            }).catch(err => {
+                                console.warn('⚠️ Failed to generate user context:', err);
+                            });
+                        }
                     }
                     
                     // Use the new method that handles name input
+                    console.log('🚀 Calling startGameFromInput...');
                     window.dinoApp.game.startGameFromInput();
                 } else {
                     // Quick start for returning players
+                    console.log('🚀 Calling start (quick start)...');
                     window.dinoApp.game.start();
                 }
+            } catch (error) {
+                console.error('❌ Error in startGameFromOverlay:', error);
+                alert('Failed to start game: ' + error.message);
             }
         }
         
@@ -401,34 +447,66 @@
                 playerBestScoreElement: !!playerBestScoreElement
             });
             
-            if (window.userDetection) {
-                const playerData = window.userDetection.getPlayerData();
-                console.log('👤 Player data retrieved:', playerData);
-                
-                if (playerData && playerData.name && playerInfo && playerNameElement) {
-                    console.log('✅ Updating player display with name:', playerData.name);
-                    
-                    playerNameElement.textContent = playerData.name;
-                    
-                    // Update game statistics
-                    if (gamesPlayedElement) {
-                        gamesPlayedElement.textContent = playerData.sessions || 0;
-                    }
-                    if (playerBestScoreElement) {
-                        const highScore = localStorage.getItem('dinoHighScore') || 0;
-                        playerBestScoreElement.textContent = highScore;
-                    }
-                    
-                    playerInfo.style.display = 'block';
-                    console.log('👁️ Player info section made visible');
-                } else {
-                    console.log('❌ Player data missing or incomplete, hiding player info');
-                    if (playerInfo) {
-                        playerInfo.style.display = 'none';
-                    }
-                }
-            } else {
+            // Check if userDetection is available
+            if (!window.userDetection) {
                 console.log('❌ userDetection not available');
+                if (playerInfo) {
+                    playerInfo.style.display = 'none';
+                }
+                return;
+            }
+            
+            const playerData = window.userDetection.getPlayerData();
+            console.log('👤 Player data retrieved:', playerData);
+            
+            if (playerData && playerData.name && playerInfo && playerNameElement) {
+                console.log('✅ Updating player display with name:', playerData.name);
+                
+                // Update player name
+                playerNameElement.textContent = playerData.name;
+                
+                // Update game statistics
+                if (gamesPlayedElement) {
+                    const sessions = playerData.sessions || 0;
+                    gamesPlayedElement.textContent = sessions;
+                    console.log('📊 Games played updated to:', sessions);
+                }
+                
+                if (playerBestScoreElement) {
+                    const highScore = localStorage.getItem('dinoHighScore') || 0;
+                    playerBestScoreElement.textContent = highScore;
+                    console.log('🏆 High score updated to:', highScore);
+                }
+                
+                // Show the player info section
+                playerInfo.style.display = 'block';
+                console.log('👁️ Player info section made visible');
+                
+                // Also update the change player button visibility
+                const changePlayerBtn = document.getElementById('changePlayerBtn');
+                if (changePlayerBtn) {
+                    changePlayerBtn.style.display = 'flex';
+                    console.log('🔧 Change player button shown');
+                }
+                
+            } else {
+                console.log('❌ Player data missing, incomplete, or elements not found');
+                console.log('   - playerData exists:', !!playerData);
+                console.log('   - playerData.name:', playerData?.name);
+                console.log('   - playerInfo element:', !!playerInfo);
+                console.log('   - playerNameElement:', !!playerNameElement);
+                
+                if (playerInfo) {
+                    playerInfo.style.display = 'none';
+                    console.log('👁️ Player info section hidden');
+                }
+                
+                // Hide change player button if no player data
+                const changePlayerBtn = document.getElementById('changePlayerBtn');
+                if (changePlayerBtn) {
+                    changePlayerBtn.style.display = 'none';
+                    console.log('🔧 Change player button hidden');
+                }
             }
         }
         
