@@ -1,6 +1,5 @@
-// Main Application Entry Point (ES6 Module)
-// Note: Dependencies are made available globally by main.js
-export class DinoRunApp {
+// Main Application Entry Point
+class DinoRunApp {
     constructor() {
         this.game = null;
         this.isInitialized = false;

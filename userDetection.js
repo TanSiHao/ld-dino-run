@@ -1,5 +1,5 @@
-// User Detection Utility for LaunchDarkly Context (ES6 Module)
-export class UserDetection {
+// User Detection Utility for LaunchDarkly Context
+class UserDetection {
     constructor() {
         this.userAgent = navigator.userAgent;
         this.platform = navigator.platform;
@@ -301,4 +301,5 @@ export class UserDetection {
     }
 }
 
-// Note: Global instance will be created in main.js 
+// Create global instance
+window.userDetection = new UserDetection();

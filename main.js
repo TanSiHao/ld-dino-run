@@ -1,84 +1,47 @@
-// Main Entry Point for LaunchDarkly Dino Run (ES6 Modules)
-// This file imports all dependencies and initializes the application
+// Main Entry Point for LaunchDarkly Dino Run (Simple Script Approach)
+// All dependencies loaded via script tags for maximum browser compatibility
 
-// LaunchDarkly dependencies will be loaded via script tags
-// The CDN scripts make these available globally as window.LDClient, window.LDObserve, window.LDRecord
+console.log('🚀 Loading LaunchDarkly Dino Run...');
 
-// Local Module Imports
-import { DinoRunConfig } from './config.js';
-import { UserDetection } from './userDetection.js';
-import { LaunchDarklyManager } from './launchDarklyConfig.js';
-import { DinoGame } from './gameEngine.js';
-import { DinoRunApp } from './app.js';
-
-console.log('🚀 Loading LaunchDarkly Dino Run with ES6 Modules...');
-
-// Wait for LaunchDarkly scripts to load, then make them available globally
-function waitForLaunchDarkly() {
-    return new Promise((resolve) => {
-        const checkForLD = () => {
-            if (window.LDClient) {
-                console.log('✅ LaunchDarkly SDK loaded');
-                console.log('🔍 Checking observability plugins...');
-                console.log('- window.LDObserve:', typeof window.LDObserve);
-                console.log('- window.LDRecord:', typeof window.LDRecord);
-                resolve();
-            } else {
-                console.log('⏳ Waiting for LaunchDarkly SDK...');
-                setTimeout(checkForLD, 100);
-            }
-        };
-        checkForLD();
-    });
-}
-
-// Debug: Log what was imported
-console.log('📦 Imported ES6 modules:');
-console.log('  - DinoRunConfig:', typeof DinoRunConfig);
-console.log('  - UserDetection:', typeof UserDetection);
-console.log('  - LaunchDarklyManager:', typeof LaunchDarklyManager);
-console.log('  - DinoGame:', typeof DinoGame);
-console.log('  - DinoRunApp:', typeof DinoRunApp);
-
-// LaunchDarkly classes are loaded via CDN and available globally
-// No need to reassign them as they're already on window
-
-// Make configuration globally available
-window.DinoRunConfig = DinoRunConfig;
-
-// Initialize User Detection
-console.log('👤 Initializing User Detection...');
-window.userDetection = new UserDetection();
-console.log('✅ UserDetection initialized:', !!window.userDetection);
-
-// Initialize LaunchDarkly Manager
-console.log('🔧 Initializing LaunchDarkly Manager...');
-window.ldManager = new LaunchDarklyManager();
-console.log('✅ LaunchDarklyManager initialized:', !!window.ldManager);
+console.log('✅ Core modules loaded successfully');
+console.log('📦 Loaded modules:');
+console.log('- DinoRunConfig:', !!window.DinoRunConfig);
+console.log('- UserDetection:', !!window.userDetection);
+console.log('- LaunchDarklyManager:', !!window.ldManager);
+console.log('- DinoGame:', typeof DinoGame);
+console.log('- DinoRunApp:', typeof DinoRunApp);
 
 // Initialize and start the application when DOM is ready
 document.addEventListener('DOMContentLoaded', async () => {
+    console.log('🎮 Initializing Dino Run App...');
+    
     try {
-        console.log('🎮 Initializing Dino Run App...');
-        
-        // Wait for LaunchDarkly SDK to load first
-        await waitForLaunchDarkly();
+        // Check if required dependencies are loaded
+        console.log('📋 Checking dependencies...');
+        console.log('- window.ldManager:', !!window.ldManager);
+        console.log('- window.userDetection:', !!window.userDetection);
+        console.log('- DinoGame class:', typeof DinoGame);
+        console.log('- Canvas element:', !!document.getElementById('gameCanvas'));
         
         const app = new DinoRunApp();
-        await app.init();
+        
+        // Initialize app with error handling for LaunchDarkly
+        try {
+            await app.init();
+            console.log('✅ App initialization completed successfully');
+        } catch (initError) {
+            console.warn('⚠️ App initialization had issues but continuing:', initError);
+            // Continue anyway - the game can work without LaunchDarkly
+        }
         
         // Make app globally available for debugging
         window.dinoApp = app;
         
-        // Mark app as fully ready
-        window.appReady = true;
-        
-        console.log('✅ LaunchDarkly Dino Run initialized successfully!');
+        console.log('✅ LaunchDarkly Dino Run initialized!');
         console.log('🎯 Features enabled:');
-        console.log('  - ES6 Modules');
-        console.log('  - LaunchDarkly Observability');
-        console.log('  - Session Replay');
-        console.log('  - Feature Flags');
+        console.log('  - Game Engine');
+        console.log('  - Player Management');
+        console.log('  - LaunchDarkly Integration (if configured)');
         console.log('');
         console.log('🎮 Press SPACE to start the game!');
         
@@ -86,50 +49,36 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log('💡 Debug commands available:');
         console.log('  - window.dinoApp - Access game instance');
         console.log('  - window.ldManager - Access LaunchDarkly manager');
-        console.log('  - window.ldManager.debugObservability() - Debug observability status');
+        console.log('  - window.ldManager.cleanReset() - Reset LaunchDarkly');
         
     } catch (error) {
-        console.error('❌ Failed to initialize Dino Run App:', error);
-        console.error('Stack trace:', error.stack);
+        console.error('❌ Critical failure in app initialization:', error);
         
-        // Provide debugging information
-        console.log('🔍 Debugging information:');
-        console.log('  - window.LDClient:', typeof window.LDClient);
-        console.log('  - window.LDObserve:', typeof window.LDObserve);
-        console.log('  - window.LDRecord:', typeof window.LDRecord);
-        console.log('  - window.DinoRunConfig:', typeof window.DinoRunConfig);
-        console.log('  - window.userDetection:', typeof window.userDetection);
-        console.log('  - window.ldManager:', typeof window.ldManager);
-        
-        // Try to initialize without LaunchDarkly for basic functionality
-        console.log('🔄 Attempting basic initialization...');
+        // Try to create a minimal working game
         try {
-            // Still wait for LaunchDarkly SDK even in fallback mode
-            await waitForLaunchDarkly();
-            
-            const basicApp = new DinoRunApp();
-            await basicApp.init(); // Make sure to initialize properly
-            window.dinoApp = basicApp;
-            window.appReady = true;
-            console.log('✅ Basic app initialized - LaunchDarkly features may not be available');
-        } catch (basicError) {
-            console.error('❌ Even basic initialization failed:', basicError);
-            console.error('Stack trace:', basicError.stack);
-            
-            // Last resort: create minimal game instance
-            console.log('🔄 Creating minimal game instance as last resort...');
-            try {
-                await waitForLaunchDarkly(); // Even minimal needs LaunchDarkly for dependencies
-                const game = new DinoGame('gameCanvas');
-                window.dinoApp = { game: game, isInitialized: true };
-                window.appReady = true;
-                console.log('✅ Minimal game instance created successfully');
-            } catch (minimalError) {
-                console.error('❌ Failed to create even minimal game instance:', minimalError);
-            }
+            console.log('🔄 Creating minimal game instance...');
+            const game = new DinoGame('gameCanvas');
+            window.dinoApp = { game: game, isInitialized: true };
+            console.log('✅ Minimal game instance created');
+        } catch (minimalError) {
+            console.error('❌ Even minimal game creation failed:', minimalError);
         }
+    }
+    
+    // ALWAYS mark as ready so the game can start
+    window.appReady = true;
+    console.log('🎮 App ready! You can now start the game.');
+});
+
+// Add error handling for module loading issues
+window.addEventListener('error', (event) => {
+    if (event.message.includes('Failed to resolve module specifier')) {
+        console.error('❌ Module loading error:', event.message);
+        console.log('💡 This might be a browser compatibility issue with ES6 modules');
+        
+        // Mark as ready to allow basic functionality
+        window.appReady = true;
     }
 });
 
-// Export for potential external usage
-export { DinoRunConfig, UserDetection, LaunchDarklyManager, DinoGame, DinoRunApp }; 
+console.log('📋 Main.js setup complete - waiting for DOM ready...'); 

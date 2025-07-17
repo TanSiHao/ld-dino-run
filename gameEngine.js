@@ -1,5 +1,5 @@
-// Game Engine for Dino Run (ES6 Module)
-export class DinoGame {
+// Game Engine for Dino Run
+class DinoGame {
     constructor(canvasId) {
         console.log('🎯 DinoGame constructor called with canvasId:', canvasId);
         
@@ -429,10 +429,16 @@ export class DinoGame {
         this.hideRestartButton();
         this.updateGameStatus('🚀 Restarting...');
         
-        // Small delay for better UX feedback
+        // Force refresh flags before restart to get latest values
+        if (window.ldManager && window.ldManager.forceRefreshFlags) {
+            console.log('💫 Refreshing flags before restart...');
+            window.ldManager.forceRefreshFlags();
+        }
+        
+        // Small delay for better UX feedback and flag refresh
         setTimeout(() => {
             this.start();
-        }, 300);
+        }, 500);
     }
     
     pause() {
@@ -639,6 +645,19 @@ export class DinoGame {
             
             // Apply other feature flag settings
             this.applyWeatherBackground();
+            
+            // Force player color update from current flag values
+            this.updatePlayerColor();
+        }
+    }
+    
+    updatePlayerColor() {
+        // Explicitly update player color from current feature flags
+        if (this.player && window.ldManager && window.ldManager.isInitialized) {
+            const currentColor = window.ldManager.getDinoColor();
+            const colorHex = window.ldManager.getDinoColorHex(currentColor);
+            this.player.color = colorHex;
+            console.log('🎨 Player color updated to:', currentColor, '(' + colorHex + ')');
         }
     }
     
@@ -675,7 +694,7 @@ export class DinoGame {
 }
 
 // Player class
-export class Player {
+class Player {
     constructor() {
         this.x = 50;
         this.y = 150;
@@ -695,6 +714,11 @@ export class Player {
         this.y = this.groundY;
         this.jumpSpeed = 0;
         this.isJumping = false;
+        
+        // Refresh color from current feature flags on reset
+        if (window.ldManager && window.ldManager.isInitialized) {
+            this.color = window.ldManager.getDinoColorHex(window.ldManager.getDinoColor());
+        }
     }
     
     jump() {
@@ -883,7 +907,7 @@ export class Player {
 }
 
 // Obstacle class
-export class Obstacle {
+class Obstacle {
     constructor() {
         this.x = 800;
         this.y = 130;
@@ -907,7 +931,7 @@ export class Obstacle {
 }
 
 // Cloud class
-export class Cloud {
+class Cloud {
     constructor(x = 800) {
         this.x = x;
         this.y = 20 + Math.random() * 50;
@@ -936,7 +960,7 @@ export class Cloud {
 }
 
 // Ground class
-export class Ground {
+class Ground {
     constructor() {
         this.x = 0;
         this.y = 180;

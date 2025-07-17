@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LaunchDarkly Dino Run</title>
+    
+    <!-- Content Security Policy for LaunchDarkly (Updated with correct streaming URL) -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; connect-src 'self' https://clientsdk.launchdarkly.com https://stream.launchdarkly.com https://events.launchdarkly.com https://app.launchdarkly.com https://api.launchdarkly.com https://pub.observability.app.launchdarkly.com https://otel.observability.app.launchdarkly.com https://api.ipify.org; worker-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'">
+    
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -203,15 +207,16 @@
         </div>
     </div>
 
-    <!-- LaunchDarkly SDK via CDN -->
-    <script src="https://unpkg.com/launchdarkly-js-client-sdk@3.8.1/dist/ldclient.min.js"></script>
+    <!-- LaunchDarkly SDK (Local file to comply with CSP) -->
+    <script src="ldclient.min.js"></script>
     
-    <!-- LaunchDarkly Observability Plugins -->
-    <script src="https://unpkg.com/@launchdarkly/observability@latest/dist/observability.min.js"></script>
-    <script src="https://unpkg.com/@launchdarkly/session-replay@latest/dist/session-replay.min.js"></script>
-    
-    <!-- ES6 Module Entry Point -->
-    <script type="module" src="main.js"></script>
+    <!-- Load game files in order (Non-module approach for better compatibility) -->
+    <script src="config.js"></script>
+    <script src="userDetection.js"></script>
+    <script src="launchDarklyConfig.js"></script>
+    <script src="gameEngine.js"></script>
+    <script src="app.js"></script>
+    <script src="main.js"></script>
     
     <!-- UI Helper Functions -->
     <script>

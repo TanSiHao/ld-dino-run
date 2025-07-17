@@ -1,15 +1,7 @@
-// LaunchDarkly Configuration with Observability Support (ES6 Module)
-// 
-// OBSERVABILITY SETUP:
-// ===================
-// 
-// ✅ ES6 Module Architecture with Official LaunchDarkly Imports
-// ✅ LaunchDarkly SDK v3.8.1 with Observability & Session Replay
-// ✅ Official import statements for better tree shaking and module management
-//
-// 📖 Full Documentation: README.md section "LaunchDarkly Observability & Session Replay"
+// LaunchDarkly Configuration
+// Simple and reliable implementation using CDN
 
-export class LaunchDarklyManager {
+class LaunchDarklyManager {
     constructor() {
         // Load configuration from config.js (available via main.js)
         const config = window.DinoRunConfig || {};
@@ -34,23 +26,118 @@ export class LaunchDarklyManager {
         };
         
         this.callbacks = [];
+        
+        // Demo mode for testing
+        this.demoMode = false;
+        this.demoInterval = null; // To store the interval for demo mode
+    }
+    
+    // Enable demo mode with cycling flags
+    enableDemoMode() {
+        console.log('🎮 Demo Mode Enabled - Flags will cycle automatically!');
+        console.log('💡 To disable auto-cycling, run: window.ldManager.enableStaticMode()');
+        this.demoMode = true;
+        this.isInitialized = true;
+        
+        // Cycle through different flag values every 3 seconds
+        const colors = ['green', 'blue', 'red', 'purple', 'orange', 'pink'];
+        const difficulties = ['easy', 'medium', 'hard'];
+        const weathers = ['spring', 'summer', 'autumn', 'winter'];
+        
+        let colorIndex = 0;
+        let difficultyIndex = 0;
+        let weatherIndex = 0;
+        
+        this.demoInterval = setInterval(() => {
+            // Cycle dino color
+            this.featureFlags.dinoColor = colors[colorIndex];
+            colorIndex = (colorIndex + 1) % colors.length;
+            
+            // Cycle difficulty every 4 color changes
+            if (colorIndex === 0) {
+                this.featureFlags.difficulty = difficulties[difficultyIndex];
+                difficultyIndex = (difficultyIndex + 1) % difficulties.length;
+            }
+            
+            // Cycle weather every 2 difficulty changes
+            if (colorIndex === 0 && difficultyIndex === 0) {
+                this.featureFlags.weather = weathers[weatherIndex];
+                weatherIndex = (weatherIndex + 1) % weathers.length;
+            }
+            
+            console.log('🎯 Demo flags updated:', {
+                color: this.featureFlags.dinoColor,
+                difficulty: this.featureFlags.difficulty,
+                weather: this.featureFlags.weather
+            });
+            
+            this.updateFlagDisplay();
+            this.notifyCallbacks();
+        }, 3000);
+        
+        this.notifyCallbacks();
+        return true;
+    }
+    
+    // Enable static mode (no auto-cycling)
+    enableStaticMode() {
+        console.log('🔒 Static Mode Enabled - Using default values');
+        
+        // Clear any existing demo interval
+        if (this.demoInterval) {
+            clearInterval(this.demoInterval);
+            this.demoInterval = null;
+        }
+        
+        this.demoMode = false;
+        this.isInitialized = true;
+        
+        // Reset to default values
+        this.featureFlags = {
+            dinoColor: 'green',
+            difficulty: 'medium', 
+            weather: 'spring'
+        };
+        
+        console.log('✅ Static flags set:', this.featureFlags);
+        this.updateFlagDisplay();
+        this.notifyCallbacks();
+        return true;
+    }
+    
+    // Manual flag setters for testing
+    setDinoColor(color) {
+        if (['green', 'blue', 'red', 'purple', 'orange', 'pink'].includes(color)) {
+            this.featureFlags.dinoColor = color;
+            this.updateFlagDisplay();
+            this.notifyCallbacks();
+            console.log('🎨 Dino color set to:', color);
+        }
+    }
+    
+    setDifficulty(difficulty) {
+        if (['easy', 'medium', 'hard'].includes(difficulty)) {
+            this.featureFlags.difficulty = difficulty;
+            this.updateFlagDisplay();
+            this.notifyCallbacks();
+            console.log('⚡ Difficulty set to:', difficulty);
+        }
+    }
+    
+    setWeather(weather) {
+        if (['spring', 'summer', 'autumn', 'winter'].includes(weather)) {
+            this.featureFlags.weather = weather;
+            this.updateFlagDisplay();
+            this.notifyCallbacks();
+            console.log('🌤️ Weather set to:', weather);
+        }
     }
     
     async initialize(playerName = null) {
+        console.log('🚀 Initializing LaunchDarkly...');
+        
         try {
-            // Validate configuration
-            const isConfigValid = window.DinoRunConfig?.validate() !== false;
-            
-            if (!isConfigValid) {
-                console.log('🎮 Game will run with default values.');
-                console.log('💡 To enable LaunchDarkly features:');
-                console.log(window.DinoRunConfig?.getSetupInstructions());
-                this.isInitialized = true;
-                this.notifyCallbacks();
-                return;
-            }
-            
-            // Generate comprehensive user context
+            // Generate user context
             let userContext;
             if (window.userDetection) {
                 console.log('🔍 Detecting user environment...');
@@ -61,16 +148,9 @@ export class LaunchDarklyManager {
                     window.userDetection.savePlayerData(userContext);
                 }
                 
-                console.log('👤 User Context:', {
-                    name: userContext.name,
-                    device: userContext.custom.deviceType,
-                    browser: `${userContext.custom.browserName} ${userContext.custom.browserVersion}`,
-                    os: userContext.custom.operatingSystem,
-                    country: userContext.custom.country,
-                    firstSession: userContext.custom.firstSession
-                });
+                console.log('👤 User Context Created');
             } else {
-                // Fallback user context if userDetection is not available
+                // Fallback user context
                 userContext = {
                     key: 'user-' + Math.random().toString(36).substr(2, 9),
                     name: playerName || 'Game Player',
@@ -85,131 +165,131 @@ export class LaunchDarklyManager {
             console.log(`🚀 Initializing LaunchDarkly for project: ${this.projectName}`);
             console.log('🔑 Client ID:', this.clientSideId);
             console.log(`👋 Welcome, ${userContext.name}!`);
-            console.log('👤 User Context:', userContext);
             
-            // Store the current user context before client creation
+            // Store the current user context
             this.currentUser = userContext;
-            console.log('💾 User context stored for reference');
             
-            // Initialize LaunchDarkly client with observability plugins (ES6 modules)
-            console.log('🔍 Checking observability plugin availability...');
-            console.log('- window.LDClient:', typeof window.LDClient);
-            console.log('- window.LDObserve:', typeof window.LDObserve);
-            console.log('- window.LDRecord:', typeof window.LDRecord);
-            
-            // Check if observability plugins are available
-            const hasObservabilityPlugins = window.LDObserve && window.LDRecord;
-            
-            if (hasObservabilityPlugins) {
-                console.log('✅ Observability plugins found, initializing with full features...');
-                try {
-                    this.client = window.LDClient.initialize(this.clientSideId, userContext, {
-                        plugins: [
-                            // Observability Plugin Configuration
-                            new window.LDObserve({
-                                tracingOrigins: true, // Track frontend-to-backend requests
-                                networkRecording: {
-                                    enabled: true,
-                                    recordHeadersAndBody: true // Capture network traffic details
-                                },
-                                // Custom event configuration
-                                eventCapture: {
-                                    captureClicks: true,
-                                    captureFormSubmissions: true,
-                                    capturePageViews: true
-                                }
-                            }),
-                            
-                            // Session Replay Plugin Configuration
-                            new window.LDRecord({
-                                privacySetting: 'default', // Options: 'none', 'default', 'strict'
-                                manualStart: false, // Set to true for manual control
-                                
-                                // Privacy settings for sensitive data
-                                blockSelectors: [
-                                    'input[type="password"]',
-                                    '.sensitive-data',
-                                    '[data-private]'
-                                ],
-                                
-                                // Sample rate (1 = 100% of sessions recorded)
-                                sampleRate: 1,
-                                
-                                // Maximum session length in minutes
-                                maxSessionLength: 30
-                            })
-                        ],
-                        
-                        // Enhanced configuration for better observability
-                        sendEvents: true,
-                        useReport: true,
-                        
-                        // Optional: Custom event processor for additional analytics
-                        eventProcessor: {
-                            // Process events before sending to LaunchDarkly
-                            processEvent: (event) => {
-                                // Add custom metadata to events
-                                if (event.kind === 'feature') {
-                                    event.custom = {
-                                        gameSessionId: this.gameSessionId,
-                                        timestamp: Date.now(),
-                                        gameMode: 'dino-run'
-                                    };
-                                }
-                                return event;
-                            }
-                        }
-                    });
-                    console.log('🎥 LaunchDarkly initialized with observability plugins');
-                } catch (pluginError) {
-                    console.warn('⚠️ Failed to initialize with observability plugins:', pluginError);
-                    console.log('🔄 Falling back to standard initialization...');
-                    // Fallback to standard initialization
-                    this.client = window.LDClient.initialize(this.clientSideId, userContext);
-                }
-            } else {
-                console.log('ℹ️ Observability plugins not available, using standard initialization');
-                console.log('💡 Ensure main.js has loaded and set window.LDObserve and window.LDRecord');
-                // Standard initialization without plugins
-                this.client = window.LDClient.initialize(this.clientSideId, userContext);
+            // Check if LaunchDarkly SDK is available
+            if (!window.LDClient || !window.LDClient.initialize) {
+                throw new Error('LaunchDarkly SDK not loaded');
             }
             
-            // Wait for initialization with timeout
-            const initTimeout = new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('LaunchDarkly initialization timeout (10s)')), 10000)
-            );
+            console.log('✅ LaunchDarkly SDK found, initializing...');
             
-            await Promise.race([
-                this.client.waitForInitialization(),
-                initTimeout
-            ]);
-            
-            this.isInitialized = true;
-            
-            // Get initial flag values
-            await this.updateAllFlags();
-            
-            // Listen for flag changes
-            this.client.on('change', () => {
-                this.updateAllFlags();
+            // Initialize LaunchDarkly client with localhost-friendly configuration
+            this.client = window.LDClient.initialize(this.clientSideId, userContext, {
+                sendEvents: false, // Disable events to avoid CORS issues on localhost
+                useReport: false,  // Use GET requests instead of POST to avoid preflight
+                bootstrap: 'localStorage',
+                streaming: true,   // Enable streaming for real-time flag updates
+                streamReconnectDelay: 1000, // Reconnect quickly if stream drops
+                allAttributesPrivate: false,
+                privateAttributeNames: [],
+                // Use correct streaming URL for real-time updates
+                baseUrl: 'https://clientsdk.launchdarkly.com',
+                streamUrl: 'https://stream.launchdarkly.com',
+                eventsUrl: 'https://events.launchdarkly.com'
             });
             
-            console.log('✅ LaunchDarkly initialized successfully');
-            console.log(`📋 Project: ${this.projectName}`);
-            console.log('🎯 Feature flags:', Object.keys(this.flagKeys));
-            console.log('📊 User attributes tracked:', Object.keys(userContext.custom || {}));
-            this.notifyCallbacks();
+            console.log('⏳ Waiting for LaunchDarkly initialization...');
+            
+            // Wait for initialization with better error handling
+            try {
+                const initTimeout = new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('LaunchDarkly initialization timeout (10s)')), 10000)
+                );
+                
+                await Promise.race([
+                    this.client.waitForInitialization(),
+                    initTimeout
+                ]);
+                
+                // Verify client actually initialized
+                if (!this.client.isInitialized) {
+                    throw new Error('LaunchDarkly client failed to initialize properly');
+                }
+                
+                // Test if we can get flags
+                const allFlags = this.client.allFlags();
+                console.log('🎯 All flags from LaunchDarkly:', allFlags);
+                
+                if (Object.keys(allFlags).length === 0) {
+                    console.warn('⚠️ No flags found in LaunchDarkly project');
+                    console.log('🔧 This usually means:');
+                    console.log('  1. Flags don\'t exist in your LaunchDarkly project');
+                    console.log('  2. Wrong environment or project');
+                    console.log('  3. Client-side access not enabled for flags');
+                }
+                
+                this.isInitialized = true;
+                
+                // Get initial flag values
+                await this.updateAllFlags();
+                
+                // Listen for flag changes
+                this.client.on('change', (changes) => {
+                    console.log('🔄 Flag change detected from LaunchDarkly!', changes);
+                    this.updateAllFlags();
+                });
+                
+                console.log('✅ LaunchDarkly initialized successfully');
+                console.log(`📋 Project: ${this.projectName}`);
+                console.log('🎯 Feature flags:', Object.keys(this.flagKeys));
+                console.log('📊 Available flags from LD:', Object.keys(allFlags));
+                this.notifyCallbacks();
+                
+            } catch (initError) {
+                console.error('❌ LaunchDarkly initialization failed:', initError);
+                console.log('🔧 Detailed diagnostics:');
+                console.log('  - Client exists:', !!this.client);
+                console.log('  - Client initialized:', this.client ? this.client.isInitialized : 'N/A');
+                console.log('  - All flags:', this.client ? this.client.allFlags() : 'N/A');
+                
+                // Try to get more info about the failure
+                if (this.client) {
+                    console.log('🧪 Testing individual flag access:');
+                    try {
+                        const testColor = this.client.variation(this.flagKeys.dinoColor, 'fallback-green');
+                        const testDifficulty = this.client.variation(this.flagKeys.difficulty, 'fallback-medium');
+                        const testWeather = this.client.variation(this.flagKeys.weather, 'fallback-spring');
+                        
+                        console.log('  - Color flag result:', testColor);
+                        console.log('  - Difficulty flag result:', testDifficulty);
+                        console.log('  - Weather flag result:', testWeather);
+                        
+                        // If we got fallback values, the client is partially working
+                        if (testColor.startsWith('fallback-')) {
+                            console.log('⚠️ Getting fallback values - flags likely don\'t exist in LaunchDarkly');
+                        }
+                    } catch (flagTestError) {
+                        console.error('❌ Even flag testing failed:', flagTestError);
+                    }
+                }
+                
+                throw initError;
+            }
             
         } catch (error) {
             console.error('❌ LaunchDarkly initialization failed:', error);
             console.log('🔧 Troubleshooting tips:');
             console.log('  1. Check your client-side ID in config.js:', this.clientSideId);
-            console.log('  2. Verify the flags exist in your LaunchDarkly project');
-            console.log('  3. Ensure your LaunchDarkly project allows client-side access');
+            console.log('  2. Verify the flags exist in your LaunchDarkly project:');
+            console.log('     - dino-color');
+            console.log('     - game-difficulty'); 
+            console.log('     - weather-background');
+            console.log('  3. Ensure flags have "SDKs using Client-side ID" enabled');
             console.log('  4. Check browser console for CORS or network errors');
-            console.log('  5. Verify flag keys match:', this.flagKeys);
+            console.log('  5. Verify you\'re using the correct environment');
             console.log('🎮 Using default values - game will still work!');
+            
+            // Set fallback values and mark as initialized so game works
+            this.featureFlags = {
+                dinoColor: 'green',
+                difficulty: 'medium',
+                weather: 'spring'
+            };
             this.isInitialized = true;
+            this.updateFlagDisplay();
             this.notifyCallbacks();
         }
     }
@@ -501,7 +581,7 @@ export class LaunchDarklyManager {
                 // Game-specific metadata
                 gameMode: 'dino-run',
                 version: '1.0.0',
-                sdkVersion: 'v3.4.0'
+                sdkVersion: 'v3.8.1'
             };
             
             // Track the event with LaunchDarkly
@@ -554,8 +634,104 @@ export class LaunchDarklyManager {
         });
     }
     
+    // ========================================
+    // OFFICIAL SESSION REPLAY CONTROLS
+    // ========================================
+    // 
+    // These methods provide manual control over session replay recording
+    // according to the official LaunchDarkly documentation
+    
     /**
-     * Generate a unique session ID for tracking user sessions
+     * Start a new session replay recording manually
+     * Call this when you want to begin recording a user session
+     * 
+     * @param {object} options - Optional configuration for session start
+     */
+    startSessionReplay(options = {}) {
+        if (window.SessionReplay && typeof window.SessionReplay.start === 'function') {
+            try {
+                window.SessionReplay.start({
+                    forceNew: true, // Start a new recording session
+                    silent: false,  // Show console warnings
+                    ...options
+                });
+                console.log('🎥 Session replay started manually');
+                
+                // Track custom event for session start
+                this.trackGameEvent('session_replay_started', {
+                    timestamp: Date.now(),
+                    manual_start: true,
+                    options: options
+                });
+                
+                return true;
+            } catch (error) {
+                console.error('❌ Failed to start session replay:', error);
+                return false;
+            }
+        } else {
+            console.warn('⚠️ Session replay not available. Ensure @launchdarkly/session-replay is properly imported and initialized');
+            return false;
+        }
+    }
+    
+    /**
+     * Stop the current session replay recording
+     * Call this when you want to end the recording
+     */
+    stopSessionReplay() {
+        if (window.SessionReplay && typeof window.SessionReplay.stop === 'function') {
+            try {
+                window.SessionReplay.stop();
+                console.log('🛑 Session replay stopped manually');
+                
+                // Track custom event for session stop
+                this.trackGameEvent('session_replay_stopped', {
+                    timestamp: Date.now(),
+                    manual_stop: true
+                });
+                
+                return true;
+            } catch (error) {
+                console.error('❌ Failed to stop session replay:', error);
+                return false;
+            }
+        } else {
+            console.warn('⚠️ Session replay not available');
+            return false;
+        }
+    }
+    
+    /**
+     * Check if session replay is currently recording
+     * 
+     * @returns {boolean} True if recording, false otherwise
+     */
+    isSessionReplayActive() {
+        if (window.SessionReplay && typeof window.SessionReplay.isRecording === 'function') {
+            return window.SessionReplay.isRecording();
+        }
+        return false;
+    }
+    
+    /**
+     * Get session replay status and configuration
+     * 
+     * @returns {object} Status information about session replay
+     */
+    getSessionReplayStatus() {
+        const status = {
+            available: !!(window.SessionReplay),
+            recording: this.isSessionReplayActive(),
+            timestamp: Date.now()
+        };
+        
+        console.log('📊 Session replay status:', status);
+        return status;
+    }
+    
+    /**
+     * Generate a unique session ID for tracking game sessions
      * Persists for the duration of the page session
      * 
      * @returns {string} Unique session identifier
@@ -569,28 +745,330 @@ export class LaunchDarklyManager {
             this.trackGameEvent('session_started', {
                 sessionId: this.gameSessionId,
                 referrer: document.referrer,
-                currentUrl: window.location.href
+                currentUrl: window.location.href,
+                userAgent: navigator.userAgent.substring(0, 100)
             });
         }
         return this.gameSessionId;
     }
     
     /**
-     * Start enhanced observability session (without requiring SDK upgrade)
+     * Start enhanced observability session with official plugins
      * Sets up tracking for this session and logs initial context
      */
     startObservabilitySession() {
         const sessionId = this.generateGameSessionId();
         
-        console.log('🔍 Enhanced observability session started');
+        console.log('🔍 Enhanced observability session started with official plugins');
         console.log('📋 Session ID:', sessionId);
         console.log('🎯 Flag states:', this.featureFlags);
+        console.log('🎥 Session replay status:', this.getSessionReplayStatus());
         console.log('💡 Tip: View events in LaunchDarkly Dashboard > Insights > Events');
         
         // Track initial page load
         this.trackPerformanceMetric('page_load_time', performance.now(), 'ms');
         
+        // Track initial observability setup
+        this.trackGameEvent('observability_session_started', {
+            sessionId: sessionId,
+            hasSessionReplay: this.isSessionReplayActive(),
+            pluginsLoaded: {
+                observe: !!(window.LDObserve),
+                record: !!(window.LDRecord),
+                sessionReplay: !!(window.SessionReplay),
+                observability: !!(window.Observability)
+            }
+        });
+        
         return sessionId;
+    }
+
+    // Force real LaunchDarkly connection (bypass demo mode)
+    async forceRealLaunchDarkly(playerName = null) {
+        console.log('🚀 FORCING REAL LAUNCHDARKLY CONNECTION - No demo mode fallback');
+        
+        // Clear any demo mode
+        if (this.demoInterval) {
+            clearInterval(this.demoInterval);
+            this.demoInterval = null;
+        }
+        this.demoMode = false;
+        
+        try {
+            // Generate user context
+            let userContext;
+            if (window.userDetection) {
+                userContext = await window.userDetection.generateUserContext(playerName);
+                if (playerName) {
+                    window.userDetection.savePlayerData(userContext);
+                }
+            } else {
+                userContext = {
+                    key: 'user-' + Math.random().toString(36).substr(2, 9),
+                    name: playerName || 'Game Player',
+                    email: playerName ? `${playerName.toLowerCase().replace(/\s+/g, '.')}@dino-run.game` : 'player@example.com',
+                    custom: {
+                        project: this.projectName,
+                        gameVersion: '1.0.0'
+                    }
+                };
+            }
+            
+            console.log('👤 User Context for LaunchDarkly:', userContext);
+            console.log('🔑 Client-side ID:', this.clientSideId);
+            console.log('🎯 Flag keys to check:', this.flagKeys);
+            
+            // Check LaunchDarkly SDK
+            if (!window.LDClient || !window.LDClient.initialize) {
+                throw new Error('LaunchDarkly SDK not loaded. Check if ldclient.min.js loaded properly.');
+            }
+            
+            console.log('✅ LaunchDarkly SDK found, initializing...');
+            
+            // Initialize LaunchDarkly with localhost-friendly configuration
+            this.client = window.LDClient.initialize(this.clientSideId, userContext, {
+                sendEvents: false, // Disable events to avoid CORS issues on localhost
+                useReport: false,  // Use GET requests instead of POST to avoid preflight
+                bootstrap: 'localStorage',
+                streaming: true    // Enable streaming for real-time flag updates
+            });
+            
+            console.log('⏳ Waiting for LaunchDarkly initialization...');
+            
+            // Wait for initialization with detailed timeout
+            const initTimeout = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('LaunchDarkly initialization timeout after 10 seconds')), 10000)
+            );
+            
+            await Promise.race([
+                this.client.waitForInitialization(),
+                initTimeout
+            ]);
+            
+            this.isInitialized = true;
+            this.currentUser = userContext;
+            
+            console.log('✅ LaunchDarkly initialized successfully!');
+            
+            // Test flag retrieval immediately
+            console.log('🧪 Testing flag retrieval...');
+            try {
+                const testColor = this.client.variation(this.flagKeys.dinoColor, 'green');
+                const testDifficulty = this.client.variation(this.flagKeys.difficulty, 'medium');
+                const testWeather = this.client.variation(this.flagKeys.weather, 'spring');
+                
+                console.log('🎯 Flag test results:');
+                console.log(`  🎨 ${this.flagKeys.dinoColor}: ${testColor}`);
+                console.log(`  ⚡ ${this.flagKeys.difficulty}: ${testDifficulty}`);
+                console.log(`  🌤️ ${this.flagKeys.weather}: ${testWeather}`);
+                
+                // Update flags
+                await this.updateAllFlags();
+                
+                // Listen for flag changes
+                this.client.on('change', () => {
+                    console.log('🔄 Flag change detected from LaunchDarkly!');
+                    this.updateAllFlags();
+                });
+                
+                this.notifyCallbacks();
+                
+                console.log('🎉 Real LaunchDarkly connection established successfully!');
+                console.log('💡 Try changing flag values in your LaunchDarkly dashboard now');
+                
+                return true;
+                
+            } catch (flagError) {
+                console.error('❌ Error retrieving flags:', flagError);
+                console.log('🔧 This usually means:');
+                console.log('  1. Flags don\'t exist in your LaunchDarkly project');
+                console.log('  2. Flag keys don\'t match:', this.flagKeys);
+                console.log('  3. User doesn\'t have access to flags');
+                throw flagError;
+            }
+            
+        } catch (error) {
+            console.error('❌ Real LaunchDarkly connection failed:', error);
+            console.error('Stack trace:', error.stack);
+            console.log('🔧 Debugging info:');
+            console.log('  - Client-side ID:', this.clientSideId);
+            console.log('  - Project name:', this.projectName);
+            console.log('  - Flag keys:', this.flagKeys);
+            console.log('  - LDClient available:', typeof window.LDClient);
+            
+            // Don't fallback to demo mode - throw the error so user can see it
+            throw error;
+        }
+    }
+
+    // Clean reset - go back to working LaunchDarkly
+    cleanReset() {
+        console.log('🧹 CLEAN RESET - Clearing all demo mode and reinitializing LaunchDarkly');
+        
+        // Stop any demo intervals
+        if (this.demoInterval) {
+            clearInterval(this.demoInterval);
+            this.demoInterval = null;
+        }
+        
+        // Close existing client if any
+        if (this.client) {
+            try {
+                this.client.close();
+            } catch (e) {
+                console.log('Note: Error closing client (normal if already closed)');
+            }
+        }
+        
+        // Reset all state
+        this.client = null;
+        this.isInitialized = false;
+        this.demoMode = false;
+        this.currentUser = null;
+        
+        // Reset to defaults
+        this.featureFlags = {
+            dinoColor: 'green',
+            difficulty: 'medium',
+            weather: 'spring'
+        };
+        
+        console.log('✅ State cleared. Now reinitializing with real LaunchDarkly...');
+        
+        // Reinitialize properly
+        return this.initialize();
+    }
+
+    // Simple test to verify LaunchDarkly is working
+    testFlags() {
+        console.log('🧪 Testing LaunchDarkly flag retrieval...');
+        
+        if (!this.client || !this.isInitialized) {
+            console.log('❌ LaunchDarkly not initialized');
+            return false;
+        }
+        
+        try {
+            console.log('🎯 Current flag values:');
+            const color = this.getDinoColor();
+            const difficulty = this.getDifficulty();
+            const weather = this.getWeather();
+            
+            console.log(`  🎨 Dino Color: ${color}`);
+            console.log(`  ⚡ Difficulty: ${difficulty}`);
+            console.log(`  🌤️ Weather: ${weather}`);
+            
+            console.log('✅ LaunchDarkly flags working correctly!');
+            console.log('💡 Try changing flag values in your LaunchDarkly dashboard');
+            return true;
+            
+        } catch (error) {
+            console.error('❌ Error testing flags:', error);
+            return false;
+        }
+    }
+
+    // Force refresh flags from LaunchDarkly (fixes stale flag issue)
+    async forceRefreshFlags() {
+        console.log('🔄 === FORCING FLAG REFRESH ===');
+        
+        if (!this.client || !this.isInitialized) {
+            console.log('❌ LaunchDarkly not initialized, cannot refresh');
+            return false;
+        }
+        
+        try {
+            console.log('💫 Forcing flag refresh from LaunchDarkly...');
+            
+            // Force the client to fetch fresh flags
+            await this.client.flush();
+            
+            // Wait a moment for fresh data
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // Get fresh flag values
+            const freshColor = this.client.variation(this.flagKeys.dinoColor, 'green');
+            const freshDifficulty = this.client.variation(this.flagKeys.difficulty, 'medium');
+            const freshWeather = this.client.variation(this.flagKeys.weather, 'spring');
+            
+            console.log('🎯 Fresh flag values from LaunchDarkly:');
+            console.log(`  🎨 Color: ${freshColor}`);
+            console.log(`  ⚡ Difficulty: ${freshDifficulty}`);
+            console.log(`  🌤️ Weather: ${freshWeather}`);
+            
+            // Update our local flags
+            this.featureFlags.dinoColor = freshColor;
+            this.featureFlags.difficulty = freshDifficulty;
+            this.featureFlags.weather = freshWeather;
+            
+            // Update UI and notify game
+            this.updateFlagDisplay();
+            this.notifyCallbacks();
+            
+            console.log('✅ Flags refreshed successfully!');
+            return true;
+            
+        } catch (error) {
+            console.error('❌ Error refreshing flags:', error);
+            return false;
+        }
+    }
+
+    // Debug LaunchDarkly step by step
+    debugLaunchDarkly() {
+        console.log('🔍 === LAUNCHDARKLY DEBUG ===');
+        console.log('1. Basic State Check:');
+        console.log('   - Client exists:', !!this.client);
+        console.log('   - Is initialized:', this.isInitialized);
+        console.log('   - Demo mode:', this.demoMode);
+        console.log('   - Current flags:', this.featureFlags);
+        
+        console.log('2. Configuration Check:');
+        console.log('   - Client-side ID:', this.clientSideId);
+        console.log('   - Project name:', this.projectName);
+        console.log('   - Flag keys:', this.flagKeys);
+        
+        console.log('3. LaunchDarkly SDK Check:');
+        console.log('   - LDClient available:', typeof window.LDClient);
+        console.log('   - LDClient.initialize available:', !!(window.LDClient && window.LDClient.initialize));
+        
+        if (this.client) {
+            console.log('4. Client State Check:');
+            try {
+                console.log('   - Client initialized:', !!this.client.isInitialized);
+                console.log('   - Client allFlags():', this.client.allFlags());
+                
+                console.log('5. Manual Flag Retrieval Test:');
+                const colorTest = this.client.variation(this.flagKeys.dinoColor, 'test-green');
+                const difficultyTest = this.client.variation(this.flagKeys.difficulty, 'test-medium');
+                const weatherTest = this.client.variation(this.flagKeys.weather, 'test-spring');
+                
+                console.log(`   - Color flag (${this.flagKeys.dinoColor}):`, colorTest);
+                console.log(`   - Difficulty flag (${this.flagKeys.difficulty}):`, difficultyTest);
+                console.log(`   - Weather flag (${this.flagKeys.weather}):`, weatherTest);
+                
+                // Try to update flags manually
+                console.log('6. Manual Flag Update:');
+                this.featureFlags.dinoColor = colorTest;
+                this.featureFlags.difficulty = difficultyTest;
+                this.featureFlags.weather = weatherTest;
+                
+                console.log('   - Updated featureFlags:', this.featureFlags);
+                
+                // Update display
+                this.updateFlagDisplay();
+                this.notifyCallbacks();
+                
+                console.log('✅ Manual flag update completed');
+                
+            } catch (error) {
+                console.error('❌ Error during manual flag test:', error);
+            }
+        } else {
+            console.log('❌ No LaunchDarkly client available for testing');
+        }
+        
+        console.log('🔍 === DEBUG COMPLETE ===');
     }
 }
 

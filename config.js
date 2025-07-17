@@ -1,7 +1,7 @@
-// Configuration file for LaunchDarkly Dino Run (ES6 Module)
+// Configuration file for LaunchDarkly Dino Run
 // Update these values based on your .env file
 
-export const DinoRunConfig = {
+const DinoRunConfig = {
     // LaunchDarkly Configuration
     // Replace with your actual client-side ID from .env file
     launchDarkly: {
@@ -70,4 +70,7 @@ DinoRunConfig.getSetupInstructions = function() {
 5. Start the game:
    npm start
 `;
-}; 
+};
+
+// Make globally available
+window.DinoRunConfig = DinoRunConfig; 
