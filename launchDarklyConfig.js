@@ -15,14 +15,16 @@ class LaunchDarklyManager {
         this.featureFlags = {
             dinoColor: config.defaults?.dinoColor || 'green',
             difficulty: config.defaults?.difficulty || 'medium',
-            weather: config.defaults?.weather || 'spring'
+            weather: config.defaults?.weather || 'spring',
+            obstacleType: config.defaults?.obstacleType || 'logos'
         };
         
         // Feature flag keys from configuration
         this.flagKeys = {
             dinoColor: config.launchDarkly?.flags?.dinoColor || 'dino-color',
             difficulty: config.launchDarkly?.flags?.difficulty || 'game-difficulty', 
-            weather: config.launchDarkly?.flags?.weather || 'weather-background'
+            weather: config.launchDarkly?.flags?.weather || 'weather-background',
+            obstacleType: config.launchDarkly?.flags?.obstacleType || 'obstacle-type'
         };
         
         this.callbacks = [];
@@ -43,10 +45,12 @@ class LaunchDarklyManager {
         const colors = ['green', 'blue', 'red', 'purple', 'orange', 'pink'];
         const difficulties = ['easy', 'medium', 'hard'];
         const weathers = ['spring', 'summer', 'autumn', 'winter'];
+        const obstacleTypes = ['logos', 'classic'];
         
         let colorIndex = 0;
         let difficultyIndex = 0;
         let weatherIndex = 0;
+        let obstacleTypeIndex = 0;
         
         this.demoInterval = setInterval(() => {
             // Cycle dino color
@@ -65,10 +69,17 @@ class LaunchDarklyManager {
                 weatherIndex = (weatherIndex + 1) % weathers.length;
             }
             
+            // Cycle obstacle type every 3 color changes
+            if (colorIndex % 3 === 0) {
+                this.featureFlags.obstacleType = obstacleTypes[obstacleTypeIndex];
+                obstacleTypeIndex = (obstacleTypeIndex + 1) % obstacleTypes.length;
+            }
+            
             console.log('🎯 Demo flags updated:', {
                 color: this.featureFlags.dinoColor,
                 difficulty: this.featureFlags.difficulty,
-                weather: this.featureFlags.weather
+                weather: this.featureFlags.weather,
+                obstacles: this.featureFlags.obstacleType
             });
             
             this.updateFlagDisplay();
@@ -96,7 +107,8 @@ class LaunchDarklyManager {
         this.featureFlags = {
             dinoColor: 'green',
             difficulty: 'medium', 
-            weather: 'spring'
+            weather: 'spring',
+            obstacleType: 'logos'
         };
         
         console.log('✅ Static flags set:', this.featureFlags);
@@ -130,6 +142,15 @@ class LaunchDarklyManager {
             this.updateFlagDisplay();
             this.notifyCallbacks();
             console.log('🌤️ Weather set to:', weather);
+        }
+    }
+    
+    setObstacleType(obstacleType) {
+        if (['logos', 'classic'].includes(obstacleType)) {
+            this.featureFlags.obstacleType = obstacleType;
+            this.updateFlagDisplay();
+            this.notifyCallbacks();
+            console.log('🚧 Obstacle type set to:', obstacleType);
         }
     }
     
@@ -226,10 +247,16 @@ class LaunchDarklyManager {
                 // Get initial flag values
                 await this.updateAllFlags();
                 
-                // Listen for flag changes
+                // Listen for flag changes with enhanced real-time updates
                 this.client.on('change', (changes) => {
                     console.log('🔄 Flag change detected from LaunchDarkly!', changes);
+                    console.log('🎮 Applying changes in real-time during gameplay...');
+                    
+                    // Update our local flag values first
                     this.updateAllFlags();
+                    
+                    // Force immediate application during gameplay
+                    this.applyRealTimeUpdates(changes);
                 });
                 
                 console.log('✅ LaunchDarkly initialized successfully');
@@ -372,9 +399,13 @@ class LaunchDarklyManager {
             const difficulty = this.client.variation(this.flagKeys.difficulty, 'medium');
             this.featureFlags.difficulty = difficulty;
             
-            // Get weather flag
-            const weather = this.client.variation(this.flagKeys.weather, 'spring');
-            this.featureFlags.weather = weather;
+                    // Get weather flag
+        const weather = this.client.variation(this.flagKeys.weather, 'spring');
+        this.featureFlags.weather = weather;
+        
+        // Get obstacle type flag
+        const obstacleType = this.client.variation(this.flagKeys.obstacleType, 'logos');
+        this.featureFlags.obstacleType = obstacleType;
             
             // Update UI
             this.updateFlagDisplay();
@@ -404,6 +435,51 @@ class LaunchDarklyManager {
         if (weatherElement) {
             weatherElement.textContent = this.featureFlags.weather;
         }
+        
+        // Update obstacle type display (if element exists)
+        const obstacleTypeElement = document.getElementById('obstacle-type-value');
+        if (obstacleTypeElement) {
+            obstacleTypeElement.textContent = this.featureFlags.obstacleType;
+        }
+    }
+    
+    // Apply real-time updates during active gameplay
+    applyRealTimeUpdates(changes) {
+        console.log('🎯 Real-time update triggered with changes:', changes);
+        
+        // Check if game is currently running
+        const isGameRunning = window.dinoApp?.game?.isRunning;
+        console.log('🎮 Game running status:', isGameRunning);
+        
+        if (isGameRunning) {
+            console.log('⚡ Applying changes to active game...');
+            
+            // Force immediate application of all settings during gameplay
+            if (window.dinoApp?.game?.applySettings) {
+                window.dinoApp.game.applySettings();
+                console.log('✅ Game settings applied during gameplay');
+            }
+            
+            // Force player color update immediately
+            if (window.dinoApp?.game?.updatePlayerColor) {
+                window.dinoApp.game.updatePlayerColor();
+                console.log('🎨 Player color updated during gameplay');
+            }
+            
+            // Update weather effects immediately
+            if (window.dinoApp?.game?.applyWeatherBackground) {
+                window.dinoApp.game.applyWeatherBackground();
+                console.log('🌤️ Weather updated during gameplay');
+            }
+        }
+        
+        // Always update the UI display
+        this.updateFlagDisplay();
+        
+        // Notify all registered callbacks
+        this.notifyCallbacks();
+        
+        console.log('🔄 Real-time update complete!');
     }
     
     getDinoColorHex(colorName) {
@@ -428,6 +504,10 @@ class LaunchDarklyManager {
     
     getWeather() {
         return this.featureFlags.weather;
+    }
+    
+    getObstacleType() {
+        return this.featureFlags.obstacleType;
     }
     
     getDifficultySettings() {

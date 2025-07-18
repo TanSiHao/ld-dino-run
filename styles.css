@@ -342,13 +342,52 @@ body {
     margin-bottom: 8px;
     box-shadow: 0 6px 20px rgba(0, 170, 255, 0.5);
     position: relative;
-    max-width: calc(100% - 16px);
-    width: 800px;
-    height: 150px;
     display: block;
     margin-left: auto;
     margin-right: auto;
     overflow: hidden;
+    
+    /* Maintain aspect ratio and responsive scaling */
+    max-width: calc(100% - 16px);
+    width: 800px;
+    height: 150px;
+    
+    /* Ensure crisp pixel rendering */
+    image-rendering: -moz-crisp-edges;
+    image-rendering: -webkit-crisp-edges;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+}
+
+/* Responsive scaling for smaller screens */
+@media (max-width: 850px) {
+    #gameCanvas {
+        width: calc(100vw - 32px);
+        height: calc((100vw - 32px) * 150 / 800); /* Maintain 800:150 aspect ratio */
+        max-width: 800px;
+        max-height: 150px;
+    }
+    
+    .game-info {
+        width: calc(100vw - 32px);
+        max-width: 800px;
+    }
+}
+
+@media (max-width: 600px) {
+    #gameCanvas {
+        width: calc(100vw - 16px);
+        height: calc((100vw - 16px) * 150 / 800); /* Maintain aspect ratio */
+        max-width: 800px;
+        max-height: 150px;
+    }
+    
+    .game-info {
+        width: calc(100vw - 16px);
+        max-width: 800px;
+        flex-direction: column;
+        gap: 8px;
+    }
 }
 
 .game-info {

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LaunchDarkly Dino Run</title>
     
-    <!-- Content Security Policy for LaunchDarkly (Updated with correct streaming URL) -->
+    <!-- Content Security Policy for LaunchDarkly (Local images only) -->
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; connect-src 'self' https://clientsdk.launchdarkly.com https://stream.launchdarkly.com https://events.launchdarkly.com https://app.launchdarkly.com https://api.launchdarkly.com https://pub.observability.app.launchdarkly.com https://otel.observability.app.launchdarkly.com https://api.ipify.org; worker-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'">
     
     <link rel="stylesheet" href="styles.css">
@@ -60,6 +60,10 @@
                 <div class="flag-status" id="weather-status">
                     <span class="flag-name">WEATHER:</span>
                     <span class="flag-value" id="weather-value">Loading...</span>
+                </div>
+                <div class="flag-status" id="obstacle-type-status">
+                    <span class="flag-name">OBSTACLES:</span>
+                    <span class="flag-value" id="obstacle-type-value">Loading...</span>
                 </div>
             </div>
         </header>
@@ -158,7 +162,7 @@
         </div>
         
         <div class="game-area">
-            <canvas id="gameCanvas" width="800" height="200"></canvas>
+            <canvas id="gameCanvas" width="800" height="150"></canvas>
             
             <!-- Floating Instructions (for during gameplay) -->
             <div class="floating-instructions" id="floatingInstructions">
@@ -588,6 +592,11 @@
                 console.log('  - window.testPlayerDisplay("Name") - Test player display');
                 console.log('  - window.debugLaunchDarkly() - Debug LaunchDarkly flags');
                 console.log('  - window.testLaunchDarkly() - Test LaunchDarkly connection');
+                console.log('  - window.dinoApp.testRealTimeFlags() - Test real-time flag changes during gameplay');
+                console.log('  - window.dinoApp.checkLogoStatus() - Check LaunchDarkly logo loading status');
+                console.log('  - window.dinoApp.retryLogoLoad() - Force retry LaunchDarkly logo loading');
+                console.log('  - window.dinoApp.testImageUrl() - Test LaunchDarkly logo URL accessibility');
+                console.log('  - window.dinoApp.testLogoObstacles() - Spawn test LaunchDarkly logo obstacles');
             }, 2000);
         });
     </script>

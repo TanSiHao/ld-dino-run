@@ -12,7 +12,8 @@ const DinoRunConfig = {
         flags: {
             dinoColor: 'dino-color',      // Copy from LAUNCHDARKLY_DINO_COLOR_FLAG in .env
             difficulty: 'game-difficulty', // Copy from LAUNCHDARKLY_DIFFICULTY_FLAG in .env  
-            weather: 'weather-background'  // Copy from LAUNCHDARKLY_WEATHER_FLAG in .env
+            weather: 'weather-background', // Copy from LAUNCHDARKLY_WEATHER_FLAG in .env
+            obstacleType: 'obstacle-type'  // Controls obstacle appearance: 'logos' or 'classic'
         }
     },
     
@@ -20,13 +21,14 @@ const DinoRunConfig = {
     defaults: {
         dinoColor: 'green',
         difficulty: 'medium',
-        weather: 'spring'
+        weather: 'spring',
+        obstacleType: 'logos'
     },
     
     // Game configuration
     game: {
         canvasWidth: 800,
-        canvasHeight: 200,
+        canvasHeight: 150,
         serverPort: 3000
     }
 };

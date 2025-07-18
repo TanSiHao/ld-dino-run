@@ -697,14 +697,14 @@ class DinoGame {
 class Player {
     constructor() {
         this.x = 50;
-        this.y = 150;
+        this.y = 110; // Adjusted for new canvas height (ground at 130 - player height 20 = 110)
         this.width = 20;
         this.height = 20;
         this.jumpHeight = 90;
         this.jumpSpeed = 0;
         this.gravity = 0.8;
         this.isJumping = false;
-        this.groundY = 150;
+        this.groundY = 110; // Matches the new Y position
         this.color = '#2d7d32'; // Default green
         this.animationFrame = 0; // For walking animation
         this.animationSpeed = 0.3;
@@ -906,14 +906,80 @@ class Player {
     }
 }
 
-// Obstacle class
+// LaunchDarkly Logo Obstacle class
 class Obstacle {
     constructor() {
         this.x = 800;
-        this.y = 130;
-        this.width = 15 + Math.random() * 10;
-        this.height = 40 + Math.random() * 20;
-        this.color = '#654321';
+        
+        // Randomly choose obstacle type: low (1 logo) or high (2 stacked logos)
+        this.type = Math.random() < 0.6 ? 'low' : 'high';
+        
+        // Set dimensions based on type (logo will be 30x30 pixels)
+        this.logoSize = 30;
+        if (this.type === 'low') {
+            this.width = this.logoSize;
+            this.height = this.logoSize;
+            this.y = 100; // Ground level (130) - logo height (30) = 100
+            this.logoCount = 1;
+        } else {
+            this.width = this.logoSize;
+            this.height = this.logoSize * 2; // Two logos stacked
+            this.y = 70; // Ground level (130) - two logo heights (60) = 70
+            this.logoCount = 2;
+        }
+        
+        // LaunchDarkly brand colors for fallback
+        this.ldBlue = '#405BFF';
+        this.ldDarkBlue = '#2D4CB5';
+        this.ldWhite = '#FFFFFF';
+        
+        // Load LaunchDarkly logo image if not already loaded
+        this.ensureLogoImageLoaded();
+    }
+    
+    static logoImage = null;
+    static logoImageLoaded = false;
+    static logoImageError = false;
+    static logoLoadAttempted = false;
+    
+    static preloadLogoImage() {
+        // Only attempt to load once
+        if (Obstacle.logoLoadAttempted) return;
+        Obstacle.logoLoadAttempted = true;
+        
+        console.log('🖼️ Starting LaunchDarkly logo preload...');
+        
+        Obstacle.logoImage = new Image();
+        Obstacle.logoImage.crossOrigin = 'anonymous'; // Handle CORS
+        
+        Obstacle.logoImage.onload = () => {
+            Obstacle.logoImageLoaded = true;
+            console.log('✅ LaunchDarkly logo image loaded successfully');
+            console.log(`📐 Logo dimensions: ${Obstacle.logoImage.width}x${Obstacle.logoImage.height}`);
+        };
+        
+        Obstacle.logoImage.onerror = (error) => {
+            Obstacle.logoImageError = true;
+            console.warn('⚠️ Failed to load LaunchDarkly logo image, using fallback');
+            console.warn('🔍 Error details:', error);
+            console.warn('📁 Check if the local file exists:', Obstacle.logoImage.src);
+            console.warn('💡 Possible causes:');
+            console.warn('   - File not found (launchdarkly.png missing)');
+            console.warn('   - Server not serving PNG files properly');
+            console.warn('   - File path incorrect');
+            console.warn('   - Browser cache issues');
+        };
+        
+        // Load the LaunchDarkly logo (local PNG file)
+        Obstacle.logoImage.src = './launchdarkly.png';
+        console.log('📡 Logo image loading from local PNG file:', Obstacle.logoImage.src);
+    }
+    
+    ensureLogoImageLoaded() {
+        // Start loading if not already attempted
+        if (!Obstacle.logoLoadAttempted) {
+            Obstacle.preloadLogoImage();
+        }
     }
     
     update(speed) {
@@ -921,8 +987,99 @@ class Obstacle {
     }
     
     draw(ctx) {
-        ctx.fillStyle = this.color;
+        // Check obstacle type feature flag
+        const obstacleType = window.ldManager?.getObstacleType() || 'logos';
+        
+        if (obstacleType === 'logos') {
+            // Draw LaunchDarkly logos based on type
+            for (let i = 0; i < this.logoCount; i++) {
+                const logoY = this.y + (i * this.logoSize);
+                this.drawLaunchDarklyLogo(ctx, this.x, logoY);
+            }
+        } else {
+            // Draw classic obstacles (simple rectangles)
+            this.drawClassicObstacle(ctx);
+        }
+    }
+    
+    drawClassicObstacle(ctx) {
+        ctx.fillStyle = '#654321';
         ctx.fillRect(this.x, this.y, this.width, this.height);
+        
+        // Add some texture
+        ctx.fillStyle = '#8B4513';
+        ctx.fillRect(this.x + 2, this.y + 2, this.width - 4, this.height - 4);
+    }
+    
+    drawLaunchDarklyLogo(ctx, x, y) {
+        ctx.save();
+        
+        // Try to draw the actual LaunchDarkly logo image
+        if (Obstacle.logoImageLoaded && Obstacle.logoImage) {
+            try {
+                // Draw the actual LaunchDarkly logo image
+                ctx.drawImage(
+                    Obstacle.logoImage, 
+                    x, y, 
+                    this.logoSize, this.logoSize
+                );
+            } catch (error) {
+                console.warn('Error drawing LaunchDarkly logo image:', error);
+                this.drawFallbackLogo(ctx, x, y);
+            }
+        } else {
+            // Draw fallback logo while image loads or if it failed
+            this.drawFallbackLogo(ctx, x, y);
+        }
+        
+        ctx.restore();
+    }
+    
+    drawFallbackLogo(ctx, x, y) {
+        const size = this.logoSize;
+        const padding = 1;
+        
+        // Logo background (rounded rectangle)
+        ctx.fillStyle = this.ldBlue;
+        this.drawRoundedRect(ctx, x + padding, y + padding, size - 2, size - 2, 6);
+        
+        // Draw "LD" text in the logo
+        ctx.fillStyle = this.ldWhite;
+        ctx.font = 'bold 12px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('LD', x + size/2, y + size/2);
+        
+        // Add small flag icon
+        ctx.fillStyle = this.ldWhite;
+        const flagX = x + size - 8;
+        const flagY = y + 4;
+        
+        // Flag pole
+        ctx.fillRect(flagX, flagY, 1, 6);
+        
+        // Flag
+        ctx.beginPath();
+        ctx.moveTo(flagX + 1, flagY);
+        ctx.lineTo(flagX + 6, flagY + 2);
+        ctx.lineTo(flagX + 1, flagY + 4);
+        ctx.closePath();
+        ctx.fill();
+    }
+    
+    drawRoundedRect(ctx, x, y, width, height, radius) {
+        ctx.beginPath();
+        ctx.moveTo(x + radius, y);
+        ctx.lineTo(x + width - radius, y);
+        ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+        ctx.lineTo(x + width, y + height - radius);
+        ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+        ctx.lineTo(x + radius, y + height);
+        ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+        ctx.lineTo(x, y + radius);
+        ctx.quadraticCurveTo(x, y, x + radius, y);
+        ctx.closePath();
+        ctx.fill();
     }
     
     isOffScreen() {
@@ -963,7 +1120,7 @@ class Cloud {
 class Ground {
     constructor() {
         this.x = 0;
-        this.y = 180;
+        this.y = 130; // Adjusted for 150px canvas height (130 + 20 height = 150px)
         this.width = 800;
         this.height = 20;
         this.color = '#8B4513';
@@ -1006,4 +1163,7 @@ class Ground {
             ctx.fillRect(segment.x, this.y - segment.height, 8, segment.height);
         });
     }
-} 
+}
+
+// Make Obstacle class globally available for debugging
+window.Obstacle = Obstacle; 
