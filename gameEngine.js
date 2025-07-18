@@ -195,23 +195,29 @@ class DinoGame {
                 }
             }
             
-            // Initialize LaunchDarkly with player name (non-blocking for better UX)
+            // Identify user context with LaunchDarkly (singleton best practice)
             if (window.ldManager && playerName) {
-                console.log('🚀 Reinitializing LaunchDarkly with user:', playerName);
+                console.log('👤 Identifying user with LaunchDarkly:', playerName);
                 
-                // Do this asynchronously to avoid blocking game start
-                window.ldManager.reinitializeWithUser(playerName).then(() => {
-                    console.log('✅ LaunchDarkly reinitialized with player name');
+                try {
+                    // Use identify() method to change user context (LaunchDarkly best practice)
+                    const identifyPromise = window.ldManager.identifyUser(playerName);
+                    const timeoutPromise = new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error('LaunchDarkly identify timeout')), 5000)
+                    );
                     
-                    // Update player display again after LaunchDarkly is ready
+                    await Promise.race([identifyPromise, timeoutPromise]);
+                    console.log('✅ LaunchDarkly user identified successfully');
+                    
+                    // Update player display after user identification
                     if (typeof updatePlayerDisplay === 'function') {
                         updatePlayerDisplay();
-                        console.log('✅ Player display updated after LaunchDarkly reinitialization');
+                        console.log('✅ Player display updated after user identification');
                     }
                     
-                }).catch(err => {
-                    console.warn('⚠️ LaunchDarkly reinitialization failed, continuing with default flags:', err);
-                });
+                } catch (err) {
+                    console.warn('⚠️ LaunchDarkly user identification failed or timed out, continuing with default flags:', err);
+                }
             }
             
             // Update change player button visibility
@@ -222,12 +228,14 @@ class DinoGame {
                 console.warn('⚠️ Failed to update change player button:', buttonError);
             }
             
-            // Small delay for UI to settle, then start
-            console.log('⏳ Brief delay for UI updates...');
-            setTimeout(() => {
-                console.log('🎮 Starting game now!');
-                this.start();
-            }, 200);
+            // Track game start event with LaunchDarkly
+            if (window.ldManager && window.ldManager.isInitialized) {
+                window.ldManager.trackGameStart(playerName);
+            }
+            
+            // Start the game immediately after LaunchDarkly is ready
+            console.log('🎮 Starting game now (LaunchDarkly ready)!');
+            this.start();
             
         } catch (error) {
             console.error('❌ Error in startGameFromInput:', error);
@@ -386,22 +394,54 @@ class DinoGame {
         this.frameCount = 0;
         this.lastObstacleTime = 0;
         this.lastCloudTime = 0;
+        this.gameStartTime = Date.now(); // Track start time for duration calculation
         
         // Reset player position and state
         this.player.reset();
         
-        // 📊 OBSERVABILITY: Track game start event
-        // See README.md "LaunchDarkly Observability & Session Replay" for setup guide
-        if (window.ldManager && window.ldManager.trackGameEvent) {
-            window.ldManager.trackGameEvent('game_started', {
+        // Track game start with detailed context
+        if (window.ldManager && window.ldManager.isInitialized) {
+            window.ldManager.trackEvent('game_started_detailed', {
                 difficulty: window.ldManager.getDifficulty(),
                 dinoColor: window.ldManager.getDinoColor(),
-                weather: window.ldManager.getWeather()
+                weather: window.ldManager.getWeather(),
+                obstacleType: window.ldManager.getObstacleType(),
+                timestamp: new Date().toISOString()
             });
         }
         
         // Apply current feature flag settings
+        console.log('🎯 Game starting - applying current settings');
         this.applySettings();
+        
+        // Force flag application if LaunchDarkly is ready
+        if (window.ldManager && window.ldManager.isInitialized) {
+            console.log('🚀 LaunchDarkly ready - forcing immediate flag application');
+            
+            // Force update player color immediately
+            if (this.player) {
+                const currentColor = window.ldManager.getDinoColor();
+                const colorHex = window.ldManager.getDinoColorHex(currentColor);
+                this.player.color = colorHex;
+                console.log(`🎨 Player color set to: ${currentColor} (${colorHex})`);
+            }
+            
+            // Force weather background update
+            this.applyWeatherBackground();
+            
+            // Force difficulty settings update
+            const difficultySettings = window.ldManager.getDifficultySettings();
+            this.updateSettings(difficultySettings);
+            console.log('⚡ Difficulty settings applied:', difficultySettings);
+        }
+        
+        // Retry applying settings after a short delay to catch late-arriving flags
+        setTimeout(() => {
+            if (window.ldManager && window.ldManager.isInitialized) {
+                console.log('🔄 Re-applying settings to catch any late-arriving flags');
+                this.applySettings();
+            }
+        }, 1000);
         
         // Update UI
         this.updateScore();
@@ -460,16 +500,22 @@ class DinoGame {
         // Track games played
         this.trackGamePlayed();
         
-        // 📊 OBSERVABILITY: Track game end event with detailed metrics
-        // See README.md "LaunchDarkly Observability & Session Replay" for setup guide
-        if (window.ldManager && window.ldManager.trackGameEvent) {
-            window.ldManager.trackGameEvent('game_ended', {
+        // Track game end event with LaunchDarkly
+        if (window.ldManager && window.ldManager.isInitialized) {
+            const gameDuration = Date.now() - (this.gameStartTime || Date.now());
+            window.ldManager.trackGameEnd(this.score, gameDuration);
+            
+            // Also track detailed game metrics
+            window.ldManager.trackEvent('game_ended_detailed', {
                 finalScore: this.score,
                 highScore: this.highScore,
                 newHighScore: this.score > this.highScore,
-                gameDuration: Date.now() - (this.gameStartTime || Date.now()),
+                gameDuration: gameDuration,
                 obstaclesGenerated: this.obstacles.length,
-                frameCount: this.frameCount
+                frameCount: this.frameCount,
+                difficulty: window.ldManager.getDifficulty(),
+                dinoColor: window.ldManager.getDinoColor(),
+                weather: window.ldManager.getWeather()
             });
         }
         
@@ -638,22 +684,44 @@ class DinoGame {
     }
     
     applySettings() {
-        // Apply difficulty settings from LaunchDarkly
-        if (window.ldManager && window.ldManager.isInitialized) {
+        console.log('🔧 Applying game settings...');
+        
+        // Apply settings from LaunchDarkly (or defaults if not available)
+        if (window.ldManager) {
+            console.log('📊 Applying LaunchDarkly flag-based settings');
             const difficultySettings = window.ldManager.getDifficultySettings();
             this.updateSettings(difficultySettings);
             
             // Apply other feature flag settings
             this.applyWeatherBackground();
             
-            // Force player color update from current flag values
+            // Update player color from current flag values
             this.updatePlayerColor();
+            
+            console.log('✅ Flag-based settings applied successfully');
+        } else {
+            console.log('⏳ LaunchDarkly not available - applying default settings');
+            
+            // Apply default settings
+            const defaultSettings = {
+                obstacleSpeed: 5,
+                obstacleFrequency: 100,
+                jumpHeight: 90
+            };
+            this.updateSettings(defaultSettings);
+            
+            // Apply default player color
+            if (this.player) {
+                this.player.color = '#2d7d32'; // Default green
+            }
+            
+            console.log('🔄 Default settings applied');
         }
     }
     
     updatePlayerColor() {
-        // Explicitly update player color from current feature flags
-        if (this.player && window.ldManager && window.ldManager.isInitialized) {
+        // Update player color from current feature flags
+        if (this.player && window.ldManager) {
             const currentColor = window.ldManager.getDinoColor();
             const colorHex = window.ldManager.getDinoColorHex(currentColor);
             this.player.color = colorHex;
@@ -663,7 +731,7 @@ class DinoGame {
     
     applyWeatherBackground() {
         // Apply weather background based on feature flag
-        if (window.ldManager && window.ldManager.isInitialized) {
+        if (window.ldManager) {
             const weather = window.ldManager.getWeather();
             const canvas = document.getElementById('gameCanvas');
             if (canvas) {
@@ -716,7 +784,7 @@ class Player {
         this.isJumping = false;
         
         // Refresh color from current feature flags on reset
-        if (window.ldManager && window.ldManager.isInitialized) {
+        if (window.ldManager) {
             this.color = window.ldManager.getDinoColorHex(window.ldManager.getDinoColor());
         }
     }
@@ -750,7 +818,7 @@ class Player {
         }
         
         // Update color from feature flag
-        if (window.ldManager && window.ldManager.isInitialized) {
+        if (window.ldManager) {
             this.color = window.ldManager.getDinoColorHex(window.ldManager.getDinoColor());
         }
     }
