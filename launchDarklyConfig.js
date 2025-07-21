@@ -5,6 +5,8 @@
 import { initialize } from "launchdarkly-js-client-sdk";
 import { LDObserve } from "@launchdarkly/observability";
 import { LDRecord } from "@launchdarkly/session-replay";
+import Observability from '@launchdarkly/observability'
+import SessionReplay from '@launchdarkly/session-replay'
 import DinoRunConfig from './config.js';
 
 /**
@@ -215,7 +217,17 @@ class LaunchDarklyManager {
             }
             
             // Initialize client using ES6 imported initialize function
-            this.client = initialize(this.clientSideId, context, options);
+            this.client = initialize(this.clientSideId, context, {
+                plugins: [ new Observability({
+                  tracingOrigins: true,
+                  networkRecording: {
+                    enabled: true,
+                    recordHeadersAndBody: true
+                  }
+                }), new SessionReplay({
+                  privacySetting: 'none',
+                }) ]
+              });
             
             // Wait for initialization with timeout
             console.log('⏳ Waiting for client initialization...');
