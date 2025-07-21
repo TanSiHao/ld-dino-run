@@ -5,11 +5,10 @@ A browser-based Dino Run game with LaunchDarkly feature flags integration. Contr
 ## ✨ Features
 
 - **Classic Dino Run Gameplay**: Jump over obstacles and score points
-- **LaunchDarkly Integration**: Four feature flags control game behavior:
+- **LaunchDarkly Integration**: Three feature flags control game behavior:
   - 🎨 **Dino Color**: 6 color options (green, blue, red, purple, orange, pink)
   - 🎯 **Difficulty**: 3 levels (easy, medium, hard) affecting speed and obstacles
   - 🌤️ **Weather**: 4 seasonal backgrounds (spring, summer, autumn, winter)
-  - 🚧 **Obstacle Type**: Different obstacle styles and behaviors
 - **Responsive Design**: Works on desktop and mobile
 - **Player Profiles**: Save names and track high scores
 - **Real-time Updates**: Changes apply instantly without page refresh
@@ -49,11 +48,10 @@ terraform apply
 1. Sign up at [LaunchDarkly](https://launchdarkly.com)
 2. Copy `environment.example` to `.env` and add your client-side ID
 3. Update `config.js` with your client-side ID
-4. Create four feature flags in LaunchDarkly:
+4. Create three feature flags in LaunchDarkly:
    - `dino-color` (string: green, blue, red, purple, orange, pink)
    - `game-difficulty` (string: easy, medium, hard)  
    - `weather-background` (string: spring, summer, autumn, winter)
-   - `obstacle-type` (string: cactus, rock, bird)
 
 ## 📁 Project Structure
 
@@ -78,7 +76,6 @@ The game integrates with LaunchDarkly to demonstrate real-time feature flag capa
 - **Dino Color**: Changes dinosaur appearance instantly
 - **Difficulty**: Adjusts obstacle speed, frequency, and jump height
 - **Weather**: Updates background theme and colors
-- **Obstacle Type**: Changes obstacle appearance and behavior
 
 **Real-time Updates**: Changes made in the LaunchDarkly dashboard apply immediately (1-2 seconds) without refreshing the page. The game uses LaunchDarkly's streaming API for instant flag updates.
 
@@ -120,7 +117,6 @@ window.ldManager.checkConnections()
 window.ldManager.getDinoColor()
 window.ldManager.getDifficulty()
 window.ldManager.getWeather()
-window.ldManager.getObstacleType()
 
 // Access game instance
 window.dinoApp.game
