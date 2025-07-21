@@ -1,6 +1,18 @@
 # 🦕 LaunchDarkly Dino Run
 
-A browser-based Dino Run game with LaunchDarkly feature flags integration. Control game features dynamically without code deployments!
+![LaunchDarkly Dino Run Game](ld-deno-run.png)
+
+> **🎮 Experience the power of feature flags in action!** 
+> 
+> A browser-based Dino Run game with LaunchDarkly feature flags integration. Control game features dynamically without code deployments! Watch as dinosaur colors, difficulty levels, and weather effects change instantly through your LaunchDarkly dashboard.
+
+## 🎯 What You'll See
+
+In the game above, you can observe:
+- **🦕 Dynamic Dino Colors**: Switch between 6 vibrant colors instantly
+- **🌈 Seasonal Weather**: Beautiful backgrounds that change with feature flags  
+- **🎮 LaunchDarkly Dashboard**: Real-time flag controls visible in the interface
+- **⚡ Instant Updates**: Changes apply without page refresh - true real-time feature flagging!
 
 ## ✨ Features
 
