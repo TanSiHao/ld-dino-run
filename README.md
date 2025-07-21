@@ -81,6 +81,41 @@ The game integrates with LaunchDarkly to demonstrate real-time feature flag capa
 
 **Connection Management**: Singleton pattern ensures only one LaunchDarkly connection per session, preventing performance issues and duplicate events.
 
+## 🏗️ Technical Architecture
+
+The game is built with modern ES6 modules and integrates seamlessly with LaunchDarkly's streaming API:
+
+```mermaid
+graph TD
+    A[index.html] --> B[main.js - Entry Point]
+    B --> C[Dynamic ES6 Imports]
+    C --> D[config.js]
+    C --> E[userDetection.js] 
+    C --> F[launchDarklyConfig.js]
+    C --> G[gameEngine.js]
+    C --> H[app.js]
+    
+    F --> I[LaunchDarkly SDK via CDN]
+    F --> J[Observability Plugin]
+    F --> K[Session Replay Plugin]
+    
+    L[Import Maps] --> I
+    L --> J  
+    L --> K
+    
+    M[Real-time Streaming] --> F
+    N[User Context] --> F
+    O[Flag Updates] --> G
+```
+
+### Key Architecture Features:
+- **🎯 ES6 Modules**: Modern import/export with CDN-based dependencies
+- **📡 Real-time Streaming**: LaunchDarkly's streaming API for instant flag updates  
+- **🔄 Dynamic Imports**: Error-resilient module loading with fallbacks
+- **🏪 Singleton Pattern**: Single LaunchDarkly client instance for optimal performance
+- **🔌 Plugin Ready**: Infrastructure for Observability and Session Replay
+- **📱 Import Maps**: Browser-native module resolution via `esm.run` CDN
+
 ## 🔧 Development
 
 ### Environment Configuration
@@ -98,6 +133,12 @@ The game includes comprehensive debugging tools for LaunchDarkly integration:
 
 ### Testing in Browser Console
 ```javascript
+// Quick diagnostic (most useful for troubleshooting)
+window.debugDinoRun.quickTest()
+
+// Test name change functionality  
+window.debugDinoRun.testNameChange("NewPlayerName")
+
 // Check LaunchDarkly status
 window.ldManager.getStatus()
 
@@ -120,6 +161,9 @@ window.ldManager.getWeather()
 
 // Access game instance
 window.dinoApp.game
+
+// Show all available debug utilities
+window.debugDinoRun.showHelp()
 ```
 
 ### Keyboard Shortcuts
@@ -130,6 +174,9 @@ window.dinoApp.game
 - **Alt + U**: Show current user context
 - **Alt + S**: Test streaming connection
 - **Alt + C**: Check connection count
+- **Alt + V**: Start Session Replay recording (when enabled)
+- **Alt + X**: Stop Session Replay recording (when enabled)
+- **Alt + Z**: Check Session Replay status (when enabled)
 
 ## 📊 Observability & Analytics
 
@@ -193,10 +240,13 @@ See the [Observability Guide](docs/observability.md) for detailed implementation
 
 ## 🌐 Browser Support
 
-- Chrome (recommended)
-- Firefox
-- Safari  
-- Edge
+**Modern browsers with ES6 module support:**
+- Chrome 61+ (recommended)
+- Firefox 60+
+- Safari 10.1+  
+- Edge 16+
+
+**Note**: The game uses ES6 modules with import maps, requiring modern browser support. For older browsers, a build step would be needed.
 
 ## 📄 License
 
