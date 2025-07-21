@@ -173,7 +173,7 @@ class LaunchDarklyManager {
                         if (typeof LDRecord !== 'undefined') {
                             plugins.push(LDRecord({
                                 privacySetting: 'default',
-                                sampleRate: 0.1, // Record 10% of sessions (was incorrectly 100)
+                                sampleRate: 1.0, // Record 100% of sessions for testing
                                 maxSessionLength: 30, // Maximum 30 minutes
                                 blockSelectors: [
                                     'input[type="password"]',
