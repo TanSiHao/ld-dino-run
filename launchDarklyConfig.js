@@ -488,6 +488,67 @@ class LaunchDarklyManager {
             flags: this.flags
         });
     }
+
+    /**
+     * Track game score event as requested - sends to LaunchDarkly with user context
+     * @param {number} score - Final game score
+     * @param {string} playerName - Name of the player
+     * @param {number} duration - Game duration in milliseconds
+     * @param {boolean} isNewHighScore - Whether this is a new high score
+     */
+    trackGameScore(score, playerName, duration, isNewHighScore = false) {
+        if (!this.client || !this.isInitialized) {
+            console.warn('⚠️ Cannot track game score: LaunchDarkly client not ready');
+            return;
+        }
+
+        try {
+            // Get current user context
+            const currentContext = this.getCurrentContext();
+            
+            // Prepare comprehensive event data
+            const eventData = {
+                // Core required data
+                score: score || 0,
+                playerName: playerName || 'Anonymous',
+                timestamp: new Date().toISOString(),
+                
+                // User context information  
+                userContext: {
+                    key: currentContext?.key || 'unknown',
+                    name: currentContext?.name || 'Anonymous',
+                    email: currentContext?.email || 'anonymous@dino-game.local',
+                    isAnonymous: currentContext?.custom?.isAnonymous || true
+                },
+                
+                // Game session details
+                gameDuration: duration || 0,
+                isNewHighScore: isNewHighScore,
+                
+                // Feature flag context (what settings were active during this game)
+                activeFlags: {
+                    dinoColor: this.getDinoColor(),
+                    difficulty: this.getDifficulty(), 
+                    weather: this.getWeather()
+                },
+                
+                // Additional metadata
+                gameVersion: '1.0.0',
+                platform: 'web',
+                sessionId: currentContext?.key || 'unknown',
+                browser: navigator.userAgent.split(' ')[0] || 'unknown'
+            };
+
+            // Send the "game-score" event to LaunchDarkly
+            console.log('📊 Tracking game score event:', eventData);
+            this.client.track('game-score', eventData);
+            
+            console.log(`✅ Game score event sent to LaunchDarkly: ${playerName} scored ${score} points`);
+            
+        } catch (error) {
+            console.error('❌ Failed to track game score event:', error);
+        }
+    }
     
     trackFlagChange(flagKey, oldValue, newValue) {
         this.trackEvent('flag_changed', {

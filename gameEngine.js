@@ -506,13 +506,26 @@ class DinoGame {
         // Track game end event with LaunchDarkly
         if (window.ldManager && window.ldManager.isInitialized) {
             const gameDuration = Date.now() - (this.gameStartTime || Date.now());
+            const isNewHighScore = this.score > this.highScore;
+            
+            // Get current player name from userDetection
+            let playerName = 'Anonymous';
+            if (window.userDetection) {
+                const playerData = window.userDetection.getPlayerData();
+                playerName = playerData?.name || 'Anonymous';
+            }
+            
+            // Track the custom "game-score" event as requested
+            window.ldManager.trackGameScore(this.score, playerName, gameDuration, isNewHighScore);
+            
+            // Keep existing tracking for backwards compatibility
             window.ldManager.trackGameEnd(this.score, gameDuration);
             
             // Also track detailed game metrics
             window.ldManager.trackEvent('game_ended_detailed', {
                 finalScore: this.score,
                 highScore: this.highScore,
-                newHighScore: this.score > this.highScore,
+                newHighScore: isNewHighScore,
                 gameDuration: gameDuration,
                 obstaclesGenerated: this.obstacles.length,
                 frameCount: this.frameCount,

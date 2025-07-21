@@ -365,6 +365,38 @@ window.debugDinoRun = {
         }
         console.log('===========================');
     },
+    testGameScore: (score = 1250, playerName = 'TestPlayer') => {
+        console.log('🧪 === TESTING GAME SCORE EVENT ===');
+        console.log(`Testing score: ${score}, player: ${playerName}`);
+        
+        try {
+            if (window.ldManager && window.ldManager.trackGameScore) {
+                const duration = 45000; // 45 seconds
+                const isNewHighScore = score > (localStorage.getItem('dinoHighScore') || 0);
+                
+                window.ldManager.trackGameScore(score, playerName, duration, isNewHighScore);
+                console.log('✅ Game score event sent successfully!');
+                console.log('📊 Check LaunchDarkly Events tab to see the "game-score" event');
+                
+                return {
+                    eventSent: true,
+                    eventKey: 'game-score', 
+                    score: score,
+                    playerName: playerName,
+                    duration: duration,
+                    isNewHighScore: isNewHighScore
+                };
+            } else {
+                console.error('❌ trackGameScore method not available');
+                return { eventSent: false, error: 'trackGameScore method not available' };
+            }
+        } catch (error) {
+            console.error('❌ Game score test failed:', error);
+            return { eventSent: false, error: error.message };
+        } finally {
+            console.log('===========================');
+        }
+    },
     checkConnections: () => {
         const status = window.ldManager?.getStatus();
         if (status?.connectionMonitoring) {
@@ -389,6 +421,7 @@ window.debugDinoRun = {
         console.log('🔧 === DINO RUN DEBUG UTILITIES ===');
         console.log('window.debugDinoRun.quickTest() - Quick LaunchDarkly diagnostic');
         console.log('window.debugDinoRun.testNameChange("NewName") - Test name change process');
+        console.log('window.debugDinoRun.testGameScore(1500, "TestPlayer") - Test game score event');
         console.log('window.debugDinoRun.refreshFlags() - Refresh flags');
         console.log('window.debugDinoRun.getStatus() - Get LaunchDarkly status');
         console.log('window.debugDinoRun.testConnection() - Test connection');
