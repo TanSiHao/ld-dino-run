@@ -28,6 +28,9 @@ class LaunchDarklyManager {
         this.isInitialized = false;
         this.initializationPromise = null; // Track ongoing initialization to prevent multiple connections
         
+        // Debug options - set to false to disable observability if causing issues
+        this.enableObservability = true; // Set to false to disable observability plugins
+        
         // Feature flag mappings
         this.flagKeys = {
             dinoColor: config.launchDarkly?.flags?.dinoColor || 'dino-color',
@@ -138,32 +141,54 @@ class LaunchDarklyManager {
                 sendEvents: true,        // Enable sending events/context to LaunchDarkly platform
                 useReport: false,
                 bootstrap: 'localStorage',
-                // Observability plugins enabled
-                plugins: [
-                    ...(typeof LDObserve !== 'undefined' ? [
-                        LDObserve({
-                            tracingOrigins: [window.location.origin],
-                            webVitals: { enabled: true },
-                            eventCapture: { 
-                                captureClicks: true,
-                                captureFormSubmits: true,
-                                capturePageViews: true
-                            }
-                        })
-                    ] : []),
-                    ...(typeof LDRecord !== 'undefined' ? [
-                        LDRecord({
-                            privacySetting: 'default',
-                            sampleRate: 100, // Record 100% of sessions
-                            maxSessionLength: 30, // Maximum 30 minutes
-                            blockSelectors: [
-                                'input[type="password"]',
-                                '[data-private]'
-                            ],
-                            maskTextSelector: '[data-mask]'
-                        })
-                    ] : [])
-                ]
+                // Observability plugins with error handling
+                plugins: (() => {
+                    const plugins = [];
+                    
+                    if (!this.enableObservability) {
+                        console.log('🔧 Observability disabled via debug flag');
+                        return plugins;
+                    }
+                    
+                    // Add LDObserve with error handling
+                    try {
+                        if (typeof LDObserve !== 'undefined') {
+                            plugins.push(LDObserve({
+                                tracingOrigins: [window.location.origin],
+                                webVitals: { enabled: true },
+                                eventCapture: { 
+                                    captureClicks: true,
+                                    captureFormSubmits: true,
+                                    capturePageViews: true
+                                }
+                            }));
+                            console.log('✅ LDObserve plugin added');
+                        }
+                    } catch (error) {
+                        console.warn('⚠️ Failed to configure LDObserve:', error);
+                    }
+                    
+                    // Add LDRecord with error handling and corrected sample rate
+                    try {
+                        if (typeof LDRecord !== 'undefined') {
+                            plugins.push(LDRecord({
+                                privacySetting: 'default',
+                                sampleRate: 0.1, // Record 10% of sessions (was incorrectly 100)
+                                maxSessionLength: 30, // Maximum 30 minutes
+                                blockSelectors: [
+                                    'input[type="password"]',
+                                    '[data-private]'
+                                ],
+                                maskTextSelector: '[data-mask]'
+                            }));
+                            console.log('✅ LDRecord plugin added');
+                        }
+                    } catch (error) {
+                        console.warn('⚠️ Failed to configure LDRecord:', error);
+                    }
+                    
+                    return plugins;
+                })()
             };
             
             // Log plugin availability for debugging
