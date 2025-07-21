@@ -4,57 +4,111 @@ Implementation guide for adding official observability and session replay to the
 
 ## Current Status
 
-⚠️ **Observability features are NOT currently implemented** - this guide shows how to add them.
+✅ **Observability features are implemented and ready to use** - this guide shows the complete configuration.
 
 **What's included:**
 - ✅ Packages installed: `@launchdarkly/observability` and `@launchdarkly/session-replay`
 - ✅ CSP headers configured for observability endpoints
-- ❌ **Plugins not yet configured** in LaunchDarkly client initialization
-- ❌ **Session replay not yet enabled**
-- ❌ **Custom event tracking not yet implemented**
+- ✅ Import maps configured for browser ES6 module resolution
+- ✅ **Plugins configured** in LaunchDarkly client initialization
+- ✅ **Session replay enabled** with sampling and privacy controls
+- ✅ **Custom event tracking implemented** with game-specific metadata
+
+**Ready to use after following this guide:**
+- 🎥 Session replay recording (10% sample rate)
+- 📊 Web vitals tracking (CLS, FCP, FID, etc.)
+- 🎮 Custom game event tracking
+- 📈 Performance metrics collection
+- 🖱️ User interaction tracking
 
 ## Implementation Steps
 
-### Step 1: Edit `launchDarklyConfig.js`
+### Step 0: Configure Import Maps (Required for Browser ES6 Modules)
 
-Add the observability imports at the top of the file:
+**⚠️ CRITICAL: This step must be completed first or the observability imports will crash the game.**
 
-```javascript
-// Add these imports after existing imports
-import { LDObserve } from '@launchdarkly/observability';
-import { LDRecord } from '@launchdarkly/session-replay';
+#### Why This Is Needed
+Browser ES6 modules require explicit URL mappings for npm packages. Unlike Node.js, browsers cannot automatically resolve package names like `@launchdarkly/observability` without import maps.
+
+#### Edit `index.html`
+Find the import map section (around line 210) and update it to include the observability packages:
+
+```html
+<!-- Import maps with observability support -->
+<script type="importmap">
+{
+    "imports": {
+        "launchdarkly-js-client-sdk": "https://esm.run/launchdarkly-js-client-sdk@3.8.1",
+        "@launchdarkly/observability": "https://esm.run/@launchdarkly/observability@0.3.5",
+        "@launchdarkly/session-replay": "https://esm.run/@launchdarkly/session-replay@0.3.5"
+    }
+}
+</script>
 ```
 
-In the `initialize()` method, add plugins to the client configuration:
+#### Common Import Errors (Before Fix)
+If you see errors like these, it means the import map is missing:
+```
+Failed to resolve module specifier "@launchdarkly/observability"
+Uncaught TypeError: Failed to resolve module specifier '@launchdarkly/observability'
+```
+
+### Step 1: Edit `launchDarklyConfig.js`
+
+#### Add the Observability Imports
+At the top of the file (around lines 5-6), ensure these imports are present and **not commented out**:
 
 ```javascript
-// Find the LDClient.initialize() call and add plugins option
-this.client = LDClient.initialize(this.clientSideId, userContext, {
-    // ... existing options ...
-    
-    // Add observability plugins
+// ES6 imports with observability support  
+import { initialize } from "launchdarkly-js-client-sdk";
+import { LDObserve } from "@launchdarkly/observability";
+import { LDRecord } from "@launchdarkly/session-replay";
+```
+
+**⚠️ Common Issue**: If these imports are commented out, uncomment them after completing Step 0.
+
+#### Configure the Plugins in Client Options
+
+In the `_performInitialization()` method (around line 140), find the client options configuration and update the plugins array:
+
+```javascript
+// In the options configuration, replace the empty plugins array with:
+const options = {
+    streaming: true,
+    sendEvents: true,
+    useReport: false,
+    bootstrap: 'localStorage',
+    // Replace: plugins: []
+    // With:
     plugins: [
-        LDObserve({
-            tracingOrigins: [window.location.origin],
-            webVitals: { enabled: true },
-            eventCapture: { 
-                captureClicks: true,
-                captureFormSubmits: true,
-                capturePageViews: true
-            }
-        }),
-        LDRecord({
-            privacySetting: 'default',
-            sampleRate: 0.1, // Record 10% of sessions
-            maxSessionLength: 30, // Maximum 30 minutes
-            blockSelectors: [
-                'input[type="password"]',
-                '[data-private]'
-            ],
-            maskTextSelector: '[data-mask]'
-        })
+        ...(typeof LDObserve !== 'undefined' ? [
+            LDObserve({
+                tracingOrigins: [window.location.origin],
+                webVitals: { enabled: true },
+                eventCapture: { 
+                    captureClicks: true,
+                    captureFormSubmits: true,
+                    capturePageViews: true
+                }
+            })
+        ] : []),
+        ...(typeof LDRecord !== 'undefined' ? [
+            LDRecord({
+                privacySetting: 'default',
+                sampleRate: 0.1, // Record 10% of sessions
+                maxSessionLength: 30, // Maximum 30 minutes
+                blockSelectors: [
+                    'input[type="password"]',
+                    '[data-private]'
+                ],
+                maskTextSelector: '[data-mask]'
+            })
+        ] : [])
     ]
-});
+};
+
+// Then use this options object in the initialize call:
+this.client = initialize(this.clientSideId, context, options);
 ```
 
 Add session replay control methods to the LaunchDarklyManager class:
@@ -250,6 +304,56 @@ Your `index.html` already includes the required CSP headers:
                 https://pub.observability.app.launchdarkly.com https://otel.observability.app.launchdarkly.com;
     worker-src 'self' data: blob:;
 ">
+```
+
+## Verification and Troubleshooting
+
+### Verify Import Maps Are Working
+Open browser console and check for these messages when the page loads:
+
+```
+✅ - LDObserve: function  
+✅ - LDRecord: function
+🔌 - Total plugins configured: 2
+```
+
+### Common Issues and Solutions
+
+#### Issue: Module Resolution Errors
+```
+Failed to resolve module specifier "@launchdarkly/observability"
+```
+**Solution**: Complete Step 0 - add import maps to `index.html`
+
+#### Issue: Imports Commented Out
+```
+🔌 - Total plugins configured: 0
+```
+**Solution**: Uncomment the import statements in `launchDarklyConfig.js`
+
+#### Issue: Plugins Not Loading
+```
+❌ - Observability (LDObserve): ❌ not available
+```
+**Solution**: Check that import maps URLs are accessible and imports are correct
+
+#### Issue: CSP Violations
+```
+Content Security Policy: directive "connect-src" violated
+```
+**Solution**: Verify CSP headers in `index.html` include observability endpoints
+
+### Debug Commands
+```javascript
+// Check if modules loaded correctly
+console.log('LDObserve:', typeof LDObserve);
+console.log('LDRecord:', typeof LDRecord);
+
+// Check LaunchDarkly manager status
+window.ldManager.getStatus();
+
+// Test plugins directly
+console.log('Plugins:', window.ldManager.client?.getConfiguration?.()?.plugins?.length);
 ```
 
 ## Testing Implementation

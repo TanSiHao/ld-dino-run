@@ -1,11 +1,10 @@
 // LaunchDarkly JavaScript SDK Configuration with Observability & Session Replay
 // Implementation following official documentation: https://docs.launchdarkly.com/sdk/client-side/javascript/
 
-// ES6 imports - temporarily simplified for debugging  
+// ES6 imports with observability support  
 import { initialize } from "launchdarkly-js-client-sdk";
-// Temporarily commented out observability imports for debugging
-// import { LDObserve } from "@launchdarkly/observability";
-// import { LDRecord } from "@launchdarkly/session-replay";
+import { LDObserve } from "@launchdarkly/observability";
+import { LDRecord } from "@launchdarkly/session-replay";
 import DinoRunConfig from './config.js';
 
 /**
@@ -62,9 +61,9 @@ class LaunchDarklyManager {
         // Debug: Check ES6 module imports (simplified for debugging)
         console.log('🔍 Checking ES6 module imports:');
         console.log('- initialize function:', typeof initialize);
-        // Observability imports temporarily disabled for debugging
-        // console.log('- LDObserve:', typeof LDObserve);
-        // console.log('- LDRecord:', typeof LDRecord);
+                    // Observability imports enabled
+        console.log('- LDObserve:', typeof LDObserve);
+        console.log('- LDRecord:', typeof LDRecord);
         
         console.log('🔧 LaunchDarklyManager constructor completed successfully');
         
@@ -139,40 +138,38 @@ class LaunchDarklyManager {
                 sendEvents: true,        // Enable sending events/context to LaunchDarkly platform
                 useReport: false,
                 bootstrap: 'localStorage',
-                // Temporarily disable observability plugins for debugging
-                plugins: []
-                // TODO: Re-enable observability once basic LaunchDarkly is working
-                // plugins: [
-                //     ...(typeof LDObserve !== 'undefined' ? [
-                //         LDObserve({
-                //             tracingOrigins: [window.location.origin],
-                //             webVitals: { enabled: true },
-                //             eventCapture: { 
-                //                 captureClicks: true,
-                //                 captureFormSubmits: true,
-                //                 capturePageViews: true
-                //             }
-                //         })
-                //     ] : []),
-                //     ...(typeof LDRecord !== 'undefined' ? [
-                //         LDRecord({
-                //             privacySetting: 'default',
-                //             sampleRate: 0.1, // Record 10% of sessions
-                //             maxSessionLength: 30, // Maximum 30 minutes
-                //             blockSelectors: [
-                //                 'input[type="password"]',
-                //                 '[data-private]'
-                //             ],
-                //             maskTextSelector: '[data-mask]'
-                //         })
-                //     ] : [])
-                // ]
+                // Observability plugins enabled
+                plugins: [
+                    ...(typeof LDObserve !== 'undefined' ? [
+                        LDObserve({
+                            tracingOrigins: [window.location.origin],
+                            webVitals: { enabled: true },
+                            eventCapture: { 
+                                captureClicks: true,
+                                captureFormSubmits: true,
+                                capturePageViews: true
+                            }
+                        })
+                    ] : []),
+                    ...(typeof LDRecord !== 'undefined' ? [
+                        LDRecord({
+                            privacySetting: 'default',
+                            sampleRate: 100, // Record 100% of sessions
+                            maxSessionLength: 30, // Maximum 30 minutes
+                            blockSelectors: [
+                                'input[type="password"]',
+                                '[data-private]'
+                            ],
+                            maskTextSelector: '[data-mask]'
+                        })
+                    ] : [])
+                ]
             };
             
-            // Log plugin availability for debugging (observability temporarily disabled)
+            // Log plugin availability for debugging
             console.log('🔌 Plugin status:');
-            console.log('- Observability: temporarily disabled for debugging');
-            console.log('- Session Replay: temporarily disabled for debugging'); 
+            console.log('- Observability (LDObserve):', typeof LDObserve !== 'undefined' ? '✅ enabled' : '❌ not available');
+            console.log('- Session Replay (LDRecord):', typeof LDRecord !== 'undefined' ? '✅ enabled' : '❌ not available'); 
             console.log('- Total plugins configured:', options.plugins.length);
             
             console.log('🔌 Initializing LaunchDarkly client...');
