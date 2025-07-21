@@ -872,6 +872,66 @@ class LaunchDarklyManager {
     }
 
     /**
+     * Test session replay setup and configuration
+     */
+    testSessionReplay() {
+        console.log('🧪 === SESSION REPLAY TEST ===');
+        
+        // Check if LDRecord is available
+        console.log('1. LDRecord available:', typeof LDRecord !== 'undefined');
+        if (typeof LDRecord === 'undefined') {
+            console.error('❌ LDRecord not imported. Check import maps and network requests.');
+            return false;
+        }
+        
+        // Check if client is ready
+        console.log('2. LaunchDarkly client ready:', this.isReady());
+        if (!this.isReady()) {
+            console.error('❌ LaunchDarkly client not ready. Initialize first.');
+            return false;
+        }
+        
+        // Check current status
+        const status = this.getSessionReplayStatus();
+        console.log('3. Session replay status:', status);
+        
+        // Check user context
+        const context = this.getCurrentContext();
+        console.log('4. User context:', context);
+        
+        // Try to start recording
+        console.log('5. Testing start recording...');
+        try {
+            const started = this.startSessionReplay();
+            console.log('6. Start recording result:', started);
+            
+            // Wait a moment and check if recording
+            setTimeout(() => {
+                const isRecording = this.isSessionReplayActive();
+                console.log('7. Is actively recording:', isRecording);
+                
+                if (isRecording) {
+                    // Track a test event
+                    this.trackGameEvent('session_replay_test', {
+                        testId: 'manual_test_' + Date.now(),
+                        userAgent: navigator.userAgent.substring(0, 50),
+                        timestamp: new Date().toISOString()
+                    });
+                    console.log('✅ Session replay test successful! Check LaunchDarkly dashboard in 5-10 minutes.');
+                } else {
+                    console.error('❌ Session replay not recording after start attempt');
+                }
+            }, 1000);
+            
+        } catch (error) {
+            console.error('❌ Error testing session replay:', error);
+            return false;
+        }
+        
+        return true;
+    }
+
+    /**
      * Stop session replay manually
      */
     stopSessionReplay() {
