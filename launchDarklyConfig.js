@@ -704,6 +704,14 @@ class LaunchDarklyManager {
     }
     
     /**
+     * Check if LaunchDarkly client is ready
+     * @returns {boolean} True if client is initialized and ready
+     */
+    isReady() {
+        return this.isInitialized && this.client && this.client.isInitialized;
+    }
+
+    /**
      * Get current status and debug information
      * @returns {Object} Status information
      */
