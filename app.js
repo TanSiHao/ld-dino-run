@@ -1,4 +1,8 @@
-// Main Application Entry Point
+// Main Application Entry Point - ES6 Module
+import { DinoGame } from './gameEngine.js';
+import { ldManager } from './launchDarklyConfig.js';
+import { userDetection } from './userDetection.js';
+
 class DinoRunApp {
     constructor() {
         this.game = null;
@@ -364,5 +368,8 @@ class DinoRunApp {
     }
 }
 
-// Make DinoRunApp globally available
-window.DinoRunApp = DinoRunApp; 
+// Make DinoRunApp globally available for backward compatibility
+window.DinoRunApp = DinoRunApp;
+
+// ES6 Module export
+export { DinoRunApp }; 

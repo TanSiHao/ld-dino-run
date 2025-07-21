@@ -74,5 +74,8 @@ DinoRunConfig.getSetupInstructions = function() {
 `;
 };
 
-// Make globally available
-window.DinoRunConfig = DinoRunConfig; 
+// Make globally available for backward compatibility
+window.DinoRunConfig = DinoRunConfig;
+
+// ES6 Module export
+export default DinoRunConfig; 

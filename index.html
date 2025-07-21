@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LaunchDarkly Dino Run</title>
     
-    <!-- Content Security Policy for LaunchDarkly (Local images only) -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; connect-src 'self' https://clientsdk.launchdarkly.com https://stream.launchdarkly.com https://clientstream.launchdarkly.com https://events.launchdarkly.com https://app.launchdarkly.com https://api.launchdarkly.com https://pub.observability.app.launchdarkly.com https://otel.observability.app.launchdarkly.com https://api.ipify.org; worker-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'">
+    <!-- Content Security Policy for LaunchDarkly with ES6 modules support -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://esm.run https://unpkg.com https://cdn.jsdelivr.net; connect-src 'self' https://clientsdk.launchdarkly.com https://stream.launchdarkly.com https://clientstream.launchdarkly.com https://events.launchdarkly.com https://app.launchdarkly.com https://api.launchdarkly.com https://pub.observability.app.launchdarkly.com https://otel.observability.app.launchdarkly.com https://api.ipify.org; worker-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'">
     
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -207,16 +207,17 @@
         </div>
     </div>
 
-    <!-- LaunchDarkly SDK (Local file to comply with CSP) -->
-    <script src="ldclient.min.js"></script>
+    <!-- Import maps simplified for debugging (observability temporarily disabled) -->
+    <script type="importmap">
+    {
+        "imports": {
+            "launchdarkly-js-client-sdk": "https://esm.run/launchdarkly-js-client-sdk@3.8.1"
+        }
+    }
+    </script>
     
-    <!-- Load game files in order (Non-module approach for better compatibility) -->
-    <script src="config.js"></script>
-    <script src="userDetection.js"></script>
-    <script src="launchDarklyConfig.js"></script>
-    <script src="gameEngine.js"></script>
-    <script src="app.js"></script>
-    <script src="main.js"></script>
+    <!-- Load ES6 modules (main.js imports everything else) -->
+    <script type="module" src="main.js"></script>
     
     <!-- UI Helper Functions -->
     <script>
@@ -391,18 +392,40 @@
             saveButton.disabled = true;
             
             try {
-                                  // Identify new user context with LaunchDarkly
-                  if (window.ldManager) {
-                      await window.ldManager.identifyUser(newName);
-                  }
+                // Save new user data with userDetection first
+                if (window.userDetection) {
+                    console.log('💾 Saving new player data with userDetection...');
+                    const userContext = await window.userDetection.generateUserContext(newName);
+                    console.log('🔑 Generated new user context:', userContext);
+                    window.userDetection.savePlayerData(userContext);
+                    console.log('✅ Player data saved successfully');
+                }
                 
-                // Update the displayed player name
-                updatePlayerDisplay();
+                // Identify new user context with LaunchDarkly
+                if (window.ldManager) {
+                    console.log('👤 Updating LaunchDarkly context...');
+                    await window.ldManager.identifyUser(newName);
+                    console.log('✅ LaunchDarkly context updated');
+                }
+                
+                // Update the displayed player name (with small delay to ensure data is saved)
+                setTimeout(() => {
+                    updatePlayerDisplay();
+                    console.log('🔄 Player display updated');
+                }, 100);
                 
                 // Update change player button visibility
                 if (window.dinoApp && window.dinoApp.game && window.dinoApp.game.updateChangePlayerButtonVisibility) {
                     window.dinoApp.game.updateChangePlayerButtonVisibility();
                 }
+                
+                // Force a context check for debugging
+                setTimeout(() => {
+                    if (window.ldManager) {
+                        const currentContext = window.ldManager.getCurrentContext();
+                        console.log('🔍 Current LaunchDarkly context after name change:', currentContext);
+                    }
+                }, 500);
                 
                 // Hide the modal
                 const modal = document.getElementById('nameUpdateModal');

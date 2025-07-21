@@ -301,5 +301,9 @@ class UserDetection {
     }
 }
 
-// Create global instance
+// Create global instance for backward compatibility
 window.userDetection = new UserDetection();
+
+// ES6 Module exports
+export { UserDetection };
+export const userDetection = window.userDetection;

@@ -1,13 +1,25 @@
-// LaunchDarkly JavaScript SDK Configuration
-// Simple implementation following official documentation: https://docs.launchdarkly.com/sdk/client-side/javascript/
+// LaunchDarkly JavaScript SDK Configuration with Observability & Session Replay
+// Implementation following official documentation: https://docs.launchdarkly.com/sdk/client-side/javascript/
+
+// ES6 imports - temporarily simplified for debugging  
+import { initialize } from "launchdarkly-js-client-sdk";
+// Temporarily commented out observability imports for debugging
+// import { LDObserve } from "@launchdarkly/observability";
+// import { LDRecord } from "@launchdarkly/session-replay";
+import DinoRunConfig from './config.js';
 
 /**
- * Simple LaunchDarkly Manager - Clean implementation following official patterns
+ * LaunchDarkly Manager with Observability & Session Replay - ES6 Module Implementation
  */
 class LaunchDarklyManager {
     constructor() {
-        // Load configuration
-        const config = window.DinoRunConfig || {};
+        console.log('🔧 LaunchDarklyManager constructor starting...');
+        
+        try {
+            // Load configuration from imported module
+            console.log('📋 Loading configuration...');
+            const config = DinoRunConfig || {};
+            console.log('✅ Configuration loaded:', !!config);
         
         this.clientSideId = config.launchDarkly?.clientSideId || 'YOUR_CLIENT_SIDE_ID_HERE';
         this.projectName = config.launchDarkly?.projectName || 'dino-run-game';
@@ -46,6 +58,21 @@ class LaunchDarklyManager {
             project: this.projectName,
             flagKeys: this.flagKeys
         });
+        
+        // Debug: Check ES6 module imports (simplified for debugging)
+        console.log('🔍 Checking ES6 module imports:');
+        console.log('- initialize function:', typeof initialize);
+        // Observability imports temporarily disabled for debugging
+        // console.log('- LDObserve:', typeof LDObserve);
+        // console.log('- LDRecord:', typeof LDRecord);
+        
+        console.log('🔧 LaunchDarklyManager constructor completed successfully');
+        
+        } catch (constructorError) {
+            console.error('❌ Error in LaunchDarklyManager constructor:', constructorError);
+            console.error('Constructor error stack:', constructorError.stack);
+            throw constructorError; // Re-throw to prevent broken object
+        }
     }
     
     /**
@@ -93,9 +120,9 @@ class LaunchDarklyManager {
      */
     async _performInitialization(playerName) {
         try {
-            // Check if SDK is loaded
-            if (typeof LDClient === 'undefined') {
-                throw new Error('LaunchDarkly SDK not loaded. Check if ldclient.min.js is included.');
+            // Validate LaunchDarkly SDK is imported via ES6 modules
+            if (typeof initialize === 'undefined') {
+                throw new Error('LaunchDarkly SDK not imported properly. Check import maps and ES6 modules.');
             }
             
             // Create user context
@@ -106,13 +133,47 @@ class LaunchDarklyManager {
                 name: context.name
             });
             
-            // Configure client options
+            // Configure client options with observability plugins
             const options = {
                 streaming: true,
                 sendEvents: true,        // Enable sending events/context to LaunchDarkly platform
                 useReport: false,
-                bootstrap: 'localStorage'
+                bootstrap: 'localStorage',
+                // Temporarily disable observability plugins for debugging
+                plugins: []
+                // TODO: Re-enable observability once basic LaunchDarkly is working
+                // plugins: [
+                //     ...(typeof LDObserve !== 'undefined' ? [
+                //         LDObserve({
+                //             tracingOrigins: [window.location.origin],
+                //             webVitals: { enabled: true },
+                //             eventCapture: { 
+                //                 captureClicks: true,
+                //                 captureFormSubmits: true,
+                //                 capturePageViews: true
+                //             }
+                //         })
+                //     ] : []),
+                //     ...(typeof LDRecord !== 'undefined' ? [
+                //         LDRecord({
+                //             privacySetting: 'default',
+                //             sampleRate: 0.1, // Record 10% of sessions
+                //             maxSessionLength: 30, // Maximum 30 minutes
+                //             blockSelectors: [
+                //                 'input[type="password"]',
+                //                 '[data-private]'
+                //             ],
+                //             maskTextSelector: '[data-mask]'
+                //         })
+                //     ] : [])
+                // ]
             };
+            
+            // Log plugin availability for debugging (observability temporarily disabled)
+            console.log('🔌 Plugin status:');
+            console.log('- Observability: temporarily disabled for debugging');
+            console.log('- Session Replay: temporarily disabled for debugging'); 
+            console.log('- Total plugins configured:', options.plugins.length);
             
             console.log('🔌 Initializing LaunchDarkly client...');
             
@@ -131,8 +192,8 @@ class LaunchDarklyManager {
                 console.warn('💡 Use window.debugDinoRun.checkConnections() to monitor');
             }
             
-            // Initialize client - THIS IS THE KEY FIX: use LDClient directly, not window.LDClient
-            this.client = LDClient.initialize(this.clientSideId, context, options);
+            // Initialize client using ES6 imported initialize function
+            this.client = initialize(this.clientSideId, context, options);
             
             // Wait for initialization with timeout
             console.log('⏳ Waiting for client initialization...');
@@ -700,14 +761,191 @@ class LaunchDarklyManager {
             return false;
         }
     }
+    
+    // ===================
+    // SESSION REPLAY METHODS
+    // ===================
+    
+    /**
+     * Start session replay manually
+     */
+    startSessionReplay() {
+        if (this.isReady() && typeof LDRecord !== 'undefined') {
+            try {
+                LDRecord.start();
+                this.trackGameEvent('session_replay_started', { 
+                    timestamp: new Date().toISOString(),
+                    manual: true 
+                });
+                console.log('🎥 Session replay started manually');
+                return true;
+            } catch (error) {
+                console.error('❌ Error starting session replay:', error);
+                return false;
+            }
+        }
+        console.warn('⚠️ Session replay not available - LDRecord ES6 module not imported or client not ready');
+        return false;
+    }
+
+    /**
+     * Stop session replay manually
+     */
+    stopSessionReplay() {
+        if (this.isReady() && typeof LDRecord !== 'undefined') {
+            try {
+                LDRecord.stop();
+                this.trackGameEvent('session_replay_stopped', { 
+                    timestamp: new Date().toISOString(),
+                    manual: true 
+                });
+                console.log('⏹️ Session replay stopped manually');
+                return true;
+            } catch (error) {
+                console.error('❌ Error stopping session replay:', error);
+                return false;
+            }
+        }
+        console.warn('⚠️ Session replay not available');
+        return false;
+    }
+
+    /**
+     * Check if session replay is active
+     */
+    isSessionReplayActive() {
+        if (this.isReady() && typeof LDRecord !== 'undefined') {
+            try {
+                return LDRecord.isRecording();
+            } catch (error) {
+                console.error('❌ Error checking session replay status:', error);
+                return false;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Get session replay status
+     */
+    getSessionReplayStatus() {
+        if (!this.isReady()) {
+            return { available: false, reason: 'LaunchDarkly not initialized' };
+        }
+        
+        if (typeof LDRecord === 'undefined') {
+            return { available: false, reason: 'Session replay plugin not loaded' };
+        }
+        
+        try {
+            return {
+                available: true,
+                recording: LDRecord.isRecording(),
+                sessionId: LDRecord.getSessionId ? LDRecord.getSessionId() : 'unavailable',
+                recordingUrl: LDRecord.getRecordingUrl ? LDRecord.getRecordingUrl() : 'unavailable'
+            };
+        } catch (error) {
+            return { 
+                available: true, 
+                error: error.message,
+                recording: false 
+            };
+        }
+    }
+
+    /**
+     * Track custom game events with observability metadata
+     */
+    trackGameEvent(eventName, properties = {}) {
+        if (!this.isReady()) {
+            console.warn('⚠️ Cannot track event - LaunchDarkly not initialized');
+            return;
+        }
+        
+        // Enhanced event with observability metadata
+        const eventData = {
+            ...properties,
+            game: 'dino-run',
+            version: '1.0.0',
+            timestamp: new Date().toISOString(),
+            sessionId: this.getCurrentContext()?.key || 'unknown',
+            url: window.location.href,
+            userAgent: navigator.userAgent.substring(0, 50),
+            // Add observability context
+            observability: {
+                sessionReplayActive: this.isSessionReplayActive(),
+                webVitalsEnabled: true
+            }
+        };
+        
+        try {
+            // Send to LaunchDarkly
+            this.client.track(eventName, eventData);
+            
+            // Log for debugging
+            console.log(`📊 Event tracked: ${eventName}`, eventData);
+        } catch (error) {
+            console.error('❌ Error tracking event:', error);
+        }
+    }
+
+    /**
+     * Track performance metrics with observability
+     */
+    trackPerformanceMetric(metricName, value, unit = 'ms') {
+        this.trackGameEvent('performance_metric', {
+            metric: metricName,
+            value: value,
+            unit: unit,
+            performance: {
+                now: performance.now(),
+                memory: performance.memory ? {
+                    used: Math.round(performance.memory.usedJSHeapSize / 1024 / 1024),
+                    total: Math.round(performance.memory.totalJSHeapSize / 1024 / 1024)
+                } : null
+            }
+        });
+    }
 }
 
 // Create and expose global instance (SINGLE INSTANCE ONLY)
-window.ldManager = new LaunchDarklyManager();
+console.log('🏗️ Creating LaunchDarklyManager instance...');
+try {
+    window.ldManager = new LaunchDarklyManager();
+    console.log('✅ LaunchDarklyManager instance created successfully');
+    console.log('- Instance type:', typeof window.ldManager);
+    console.log('- Instance constructor:', window.ldManager.constructor?.name);
+    console.log('- Has isReady method:', typeof window.ldManager.isReady);
+    console.log('- Available methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(window.ldManager)).filter(name => typeof window.ldManager[name] === 'function'));
+} catch (error) {
+    console.error('❌ Error creating LaunchDarklyManager:', error);
+    console.error('Error stack:', error.stack);
+}
 
 // Backward compatibility aliases
-window.ldManager.onFlagsUpdated = window.ldManager.onChange.bind(window.ldManager);
-window.ldManager.reinitializeWithUser = window.ldManager.identifyUser.bind(window.ldManager);
+try {
+    if (window.ldManager && typeof window.ldManager.onChange === 'function') {
+        window.ldManager.onFlagsUpdated = window.ldManager.onChange.bind(window.ldManager);
+        console.log('✅ onFlagsUpdated alias created');
+    } else {
+        console.error('❌ onChange method not available for alias');
+    }
+    
+    if (window.ldManager && typeof window.ldManager.identifyUser === 'function') {
+        window.ldManager.reinitializeWithUser = window.ldManager.identifyUser.bind(window.ldManager);
+        console.log('✅ reinitializeWithUser alias created');
+    } else {
+        console.error('❌ identifyUser method not available for alias');
+    }
+} catch (aliasError) {
+    console.error('❌ Error creating aliases:', aliasError);
+}
+
+// ES6 Module exports
+console.log('📤 Creating ES6 module exports...');
+export { LaunchDarklyManager };
+export const ldManager = window.ldManager;
+console.log('✅ ES6 exports created, ldManager type:', typeof ldManager);
 
 console.log('✅ LaunchDarkly Manager ready');
 console.log('💡 Usage examples:');

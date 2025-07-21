@@ -1,4 +1,7 @@
-// Game Engine for Dino Run
+// Game Engine for Dino Run - ES6 Module
+import { userDetection } from './userDetection.js';
+import { ldManager } from './launchDarklyConfig.js';
+
 class DinoGame {
     constructor(canvasId) {
         console.log('🎯 DinoGame constructor called with canvasId:', canvasId);
@@ -82,7 +85,7 @@ class DinoGame {
     }
     
     showAppropriateStartOverlay() {
-        if (window.userDetection && window.userDetection.hasPlayedBefore()) {
+        if (userDetection && userDetection.hasPlayedBefore()) {
             this.showQuickStartOverlay();
         } else {
             this.showFullWelcomeOverlay();
@@ -173,11 +176,11 @@ class DinoGame {
         
         try {
             // Save player data immediately if name provided
-            if (playerName && window.userDetection) {
+            if (playerName && userDetection) {
                 console.log('💾 Saving player data for:', playerName);
                 
                 try {
-                    const userContext = await window.userDetection.generateUserContext(playerName);
+                    const userContext = await userDetection.generateUserContext(playerName);
                     console.log('🔑 Generated user context for saving:', userContext);
                     
                     const savedData = window.userDetection.savePlayerData(userContext);
@@ -196,7 +199,7 @@ class DinoGame {
             }
             
             // Identify user context with LaunchDarkly (singleton best practice)
-            if (window.ldManager && playerName) {
+            if (ldManager && playerName) {
                 console.log('👤 Identifying user with LaunchDarkly:', playerName);
                 
                 try {
@@ -1234,4 +1237,7 @@ class Ground {
 }
 
 // Make Obstacle class globally available for debugging
-window.Obstacle = Obstacle; 
+window.Obstacle = Obstacle;
+
+// ES6 Module exports
+export { DinoGame, Player, Obstacle, Cloud, Ground }; 
