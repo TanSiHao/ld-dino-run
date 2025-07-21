@@ -3,8 +3,6 @@
 
 // ES6 imports with observability support  
 import { initialize } from "launchdarkly-js-client-sdk";
-import { LDObserve } from "@launchdarkly/observability";
-import { LDRecord } from "@launchdarkly/session-replay";
 import Observability from '@launchdarkly/observability'
 import SessionReplay from '@launchdarkly/session-replay'
 import DinoRunConfig from './config.js';
@@ -63,12 +61,6 @@ class LaunchDarklyManager {
             flagKeys: this.flagKeys
         });
         
-        // Debug: Check ES6 module imports (simplified for debugging)
-        console.log('🔍 Checking ES6 module imports:');
-        console.log('- initialize function:', typeof initialize);
-                    // Observability imports enabled
-        console.log('- LDObserve:', typeof LDObserve);
-        console.log('- LDRecord:', typeof LDRecord);
         
         console.log('🔧 LaunchDarklyManager constructor completed successfully');
         
@@ -136,68 +128,6 @@ class LaunchDarklyManager {
                 key: context.key,
                 name: context.name
             });
-            
-            // Configure client options with observability plugins
-            const options = {
-                streaming: true,
-                sendEvents: true,        // Enable sending events/context to LaunchDarkly platform
-                useReport: false,
-                bootstrap: 'localStorage',
-                // Observability plugins with error handling
-                plugins: (() => {
-                    const plugins = [];
-                    
-                    if (!this.enableObservability) {
-                        console.log('🔧 Observability disabled via debug flag');
-                        return plugins;
-                    }
-                    
-                    // Add LDObserve with error handling
-                    try {
-                        if (typeof LDObserve !== 'undefined') {
-                            plugins.push(LDObserve({
-                                tracingOrigins: [window.location.origin],
-                                webVitals: { enabled: true },
-                                eventCapture: { 
-                                    captureClicks: true,
-                                    captureFormSubmits: true,
-                                    capturePageViews: true
-                                }
-                            }));
-                            console.log('✅ LDObserve plugin added');
-                        }
-                    } catch (error) {
-                        console.warn('⚠️ Failed to configure LDObserve:', error);
-                    }
-                    
-                    // Add LDRecord with error handling and corrected sample rate
-                    try {
-                        if (typeof LDRecord !== 'undefined') {
-                            plugins.push(LDRecord({
-                                privacySetting: 'default',
-                                sampleRate: 1.0, // Record 100% of sessions for testing
-                                maxSessionLength: 30, // Maximum 30 minutes
-                                blockSelectors: [
-                                    'input[type="password"]',
-                                    '[data-private]'
-                                ],
-                                maskTextSelector: '[data-mask]'
-                            }));
-                            console.log('✅ LDRecord plugin added');
-                        }
-                    } catch (error) {
-                        console.warn('⚠️ Failed to configure LDRecord:', error);
-                    }
-                    
-                    return plugins;
-                })()
-            };
-            
-            // Log plugin availability for debugging
-            console.log('🔌 Plugin status:');
-            console.log('- Observability (LDObserve):', typeof LDObserve !== 'undefined' ? '✅ enabled' : '❌ not available');
-            console.log('- Session Replay (LDRecord):', typeof LDRecord !== 'undefined' ? '✅ enabled' : '❌ not available'); 
-            console.log('- Total plugins configured:', options.plugins.length);
             
             console.log('🔌 Initializing LaunchDarkly client...');
             
@@ -862,157 +792,6 @@ class LaunchDarklyManager {
         } catch (error) {
             console.error('❌ Error refreshing flags:', error);
             return false;
-        }
-    }
-    
-    // ===================
-    // SESSION REPLAY METHODS
-    // ===================
-    
-    /**
-     * Start session replay manually
-     */
-    startSessionReplay() {
-        if (this.isReady() && typeof LDRecord !== 'undefined') {
-            try {
-                LDRecord.start();
-                this.trackGameEvent('session_replay_started', { 
-                    timestamp: new Date().toISOString(),
-                    manual: true 
-                });
-                console.log('🎥 Session replay started manually');
-                return true;
-            } catch (error) {
-                console.error('❌ Error starting session replay:', error);
-                return false;
-            }
-        }
-        console.warn('⚠️ Session replay not available - LDRecord ES6 module not imported or client not ready');
-        return false;
-    }
-
-    /**
-     * Test session replay setup and configuration
-     */
-    testSessionReplay() {
-        console.log('🧪 === SESSION REPLAY TEST ===');
-        
-        // Check if LDRecord is available
-        console.log('1. LDRecord available:', typeof LDRecord !== 'undefined');
-        if (typeof LDRecord === 'undefined') {
-            console.error('❌ LDRecord not imported. Check import maps and network requests.');
-            return false;
-        }
-        
-        // Check if client is ready
-        console.log('2. LaunchDarkly client ready:', this.isReady());
-        if (!this.isReady()) {
-            console.error('❌ LaunchDarkly client not ready. Initialize first.');
-            return false;
-        }
-        
-        // Check current status
-        const status = this.getSessionReplayStatus();
-        console.log('3. Session replay status:', status);
-        
-        // Check user context
-        const context = this.getCurrentContext();
-        console.log('4. User context:', context);
-        
-        // Try to start recording
-        console.log('5. Testing start recording...');
-        try {
-            const started = this.startSessionReplay();
-            console.log('6. Start recording result:', started);
-            
-            // Wait a moment and check if recording
-            setTimeout(() => {
-                const isRecording = this.isSessionReplayActive();
-                console.log('7. Is actively recording:', isRecording);
-                
-                if (isRecording) {
-                    // Track a test event
-                    this.trackGameEvent('session_replay_test', {
-                        testId: 'manual_test_' + Date.now(),
-                        userAgent: navigator.userAgent.substring(0, 50),
-                        timestamp: new Date().toISOString()
-                    });
-                    console.log('✅ Session replay test successful! Check LaunchDarkly dashboard in 5-10 minutes.');
-                } else {
-                    console.error('❌ Session replay not recording after start attempt');
-                }
-            }, 1000);
-            
-        } catch (error) {
-            console.error('❌ Error testing session replay:', error);
-            return false;
-        }
-        
-        return true;
-    }
-
-    /**
-     * Stop session replay manually
-     */
-    stopSessionReplay() {
-        if (this.isReady() && typeof LDRecord !== 'undefined') {
-            try {
-                LDRecord.stop();
-                this.trackGameEvent('session_replay_stopped', { 
-                    timestamp: new Date().toISOString(),
-                    manual: true 
-                });
-                console.log('⏹️ Session replay stopped manually');
-                return true;
-            } catch (error) {
-                console.error('❌ Error stopping session replay:', error);
-                return false;
-            }
-        }
-        console.warn('⚠️ Session replay not available');
-        return false;
-    }
-
-    /**
-     * Check if session replay is active
-     */
-    isSessionReplayActive() {
-        if (this.isReady() && typeof LDRecord !== 'undefined') {
-            try {
-                return LDRecord.isRecording();
-            } catch (error) {
-                console.error('❌ Error checking session replay status:', error);
-                return false;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Get session replay status
-     */
-    getSessionReplayStatus() {
-        if (!this.isReady()) {
-            return { available: false, reason: 'LaunchDarkly not initialized' };
-        }
-        
-        if (typeof LDRecord === 'undefined') {
-            return { available: false, reason: 'Session replay plugin not loaded' };
-        }
-        
-        try {
-            return {
-                available: true,
-                recording: LDRecord.isRecording(),
-                sessionId: LDRecord.getSessionId ? LDRecord.getSessionId() : 'unavailable',
-                recordingUrl: LDRecord.getRecordingUrl ? LDRecord.getRecordingUrl() : 'unavailable'
-            };
-        } catch (error) {
-            return { 
-                available: true, 
-                error: error.message,
-                recording: false 
-            };
         }
     }
 
