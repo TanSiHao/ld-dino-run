@@ -7,19 +7,21 @@ Implementation guide for adding official observability and session replay to the
 ✅ **Observability features are implemented and ready to use** - this guide shows the complete configuration.
 
 **What's included:**
-- ✅ Packages installed: `@launchdarkly/observability` and `@launchdarkly/session-replay`
+- ✅ Packages installed: `@launchdarkly/observability@0.3.7` and `@launchdarkly/session-replay@0.3.7`
 - ✅ CSP headers configured for observability endpoints
-- ✅ Import maps configured for browser ES6 module resolution
-- ✅ **Plugins configured** in LaunchDarkly client initialization
-- ✅ **Session replay enabled** with sampling and privacy controls
+- ✅ Import maps configured for browser ES6 module resolution (using CDN version 0.3.7)
+- ✅ **Working implementation** using constructor pattern with default imports
+- ✅ **Session replay enabled** with privacy controls (`privacySetting: 'none'`)
+- ✅ **Network recording enabled** with headers and body recording
 - ✅ **Custom event tracking implemented** with game-specific metadata
 
-**Ready to use after following this guide:**
-- 🎥 Session replay recording (10% sample rate)
-- 📊 Web vitals tracking (CLS, FCP, FID, etc.)
-- 🎮 Custom game event tracking
-- 📈 Performance metrics collection
-- 🖱️ User interaction tracking
+**Currently working features:**
+- 🎥 **Session replay recording** (100% capture with current settings)
+- 📊 **Web vitals tracking** and performance metrics
+- 🌐 **Network recording** with full request/response capture
+- 🎮 **Custom game event tracking** with observability metadata
+- 📈 **Performance metrics collection** 
+- 🖱️ **User interaction tracking**
 
 ## Implementation Steps
 
@@ -39,8 +41,8 @@ Find the import map section (around line 210) and update it to include the obser
 {
     "imports": {
         "launchdarkly-js-client-sdk": "https://esm.run/launchdarkly-js-client-sdk@3.8.1",
-        "@launchdarkly/observability": "https://esm.run/@launchdarkly/observability@0.3.5",
-        "@launchdarkly/session-replay": "https://esm.run/@launchdarkly/session-replay@0.3.5"
+        "@launchdarkly/observability": "https://esm.run/@launchdarkly/observability@0.3.7",
+        "@launchdarkly/session-replay": "https://esm.run/@launchdarkly/session-replay@0.3.7"
     }
 }
 </script>
@@ -61,57 +63,93 @@ At the top of the file (around lines 5-6), ensure these imports are present and 
 ```javascript
 // ES6 imports with observability support  
 import { initialize } from "launchdarkly-js-client-sdk";
-import { LDObserve } from "@launchdarkly/observability";
-import { LDRecord } from "@launchdarkly/session-replay";
+import Observability from '@launchdarkly/observability'
+import SessionReplay from '@launchdarkly/session-replay'
 ```
 
-**⚠️ Common Issue**: If these imports are commented out, uncomment them after completing Step 0.
+**⚠️ Important**: Use **default imports** (not named exports) for the observability packages. The working pattern is `import Observability from` rather than `import { Observability } from`.
 
 #### Configure the Plugins in Client Options
 
-In the `_performInitialization()` method (around line 140), find the client options configuration and update the plugins array:
+In the `_performInitialization()` method (around line 149), find the LaunchDarkly client initialization and update it to use the **constructor pattern**:
 
 ```javascript
-// In the options configuration, replace the empty plugins array with:
-const options = {
-    streaming: true,
-    sendEvents: true,
-    useReport: false,
-    bootstrap: 'localStorage',
-    // Replace: plugins: []
-    // With:
-    plugins: [
-        ...(typeof LDObserve !== 'undefined' ? [
-            LDObserve({
-                tracingOrigins: [window.location.origin],
-                webVitals: { enabled: true },
-                eventCapture: { 
-                    captureClicks: true,
-                    captureFormSubmits: true,
-                    capturePageViews: true
-                }
-            })
-        ] : []),
-        ...(typeof LDRecord !== 'undefined' ? [
-            LDRecord({
-                privacySetting: 'default',
-                sampleRate: 0.1, // Record 10% of sessions
-                maxSessionLength: 30, // Maximum 30 minutes
-                blockSelectors: [
-                    'input[type="password"]',
-                    '[data-private]'
-                ],
-                maskTextSelector: '[data-mask]'
-            })
-        ] : [])
+// Use the constructor pattern directly in the initialize call:
+this.client = initialize(this.clientSideId, context, {
+    plugins: [ 
+        new Observability({
+            tracingOrigins: true,
+            networkRecording: {
+                enabled: true,
+                recordHeadersAndBody: true
+            }
+        }), 
+        new SessionReplay({
+            privacySetting: 'none',
+        }) 
     ]
-};
-
-// Then use this options object in the initialize call:
-this.client = initialize(this.clientSideId, context, options);
+});
 ```
 
-Add session replay control methods to the LaunchDarklyManager class:
+**✅ Key Points:**
+- **Constructor pattern**: Use `new Observability()` and `new SessionReplay()` 
+- **Simple configuration**: Directly pass the plugins array to `initialize()`
+- **No conditional checks needed**: The imports will fail early if packages aren't available
+
+### Step 2: Verification
+
+After implementing the above changes, you should see successful initialization in the browser console:
+
+```
+✅ LaunchDarkly client initialized successfully
+🎥 Session replay should be recording
+📊 Observability data being collected
+```
+
+## Working Implementation Notes
+
+### Key Success Factors
+
+1. **Default Imports**: The working implementation uses default imports, not named exports:
+   ```javascript
+   // ✅ Working
+   import Observability from '@launchdarkly/observability'
+   import SessionReplay from '@launchdarkly/session-replay'
+   
+   // ❌ Not working 
+   import { Observability } from '@launchdarkly/observability'
+   import { LDObserve } from '@launchdarkly/observability'
+   ```
+
+2. **Constructor Pattern**: Use `new` keyword with clean configuration:
+   ```javascript
+   // ✅ Working - Simple and clean
+   plugins: [ new Observability({...}), new SessionReplay({...}) ]
+   
+   // ❌ Problematic - Function calls
+   plugins: [ LDObserve({...}), LDRecord({...}) ]
+   ```
+
+3. **Version Consistency**: Ensure all versions match (currently 0.3.7):
+   - `package.json` dependencies
+   - Import map CDN URLs
+   - Actual implementation
+
+### Current Configuration Details
+
+**Observability Settings:**
+- `tracingOrigins: true` - Enables tracing for all origins
+- `networkRecording.enabled: true` - Records all network requests
+- `recordHeadersAndBody: true` - Captures full request/response data
+
+**Session Replay Settings:**
+- `privacySetting: 'none'` - Records everything (adjust for production)
+- Full session capture enabled
+- No sampling limitations (100% recording)
+
+## Legacy Documentation (Kept for Reference)
+
+The following sections document previous implementation attempts that didn't work:
 
 ```javascript
 // Add these methods to LaunchDarklyManager class
@@ -402,5 +440,16 @@ console.log('Plugins available:', {
 1. **Insights** → **Events**: View custom game events
 2. **Session Replay**: Watch recorded user sessions  
 3. **Observability**: View performance metrics and web vitals
+
+## Summary
+
+This implementation successfully integrates LaunchDarkly Observability and Session Replay using:
+
+- **Version 0.3.7** of both observability packages
+- **Default imports** with constructor pattern
+- **Simple, direct configuration** in the LaunchDarkly client initialization
+- **Full session recording** and network monitoring enabled
+
+The key breakthrough was using the correct import syntax and constructor pattern rather than the named exports and function calls documented elsewhere.
 
 For detailed API documentation, see the [official LaunchDarkly docs](https://launchdarkly.com/docs/sdk/observability/javascript). 
