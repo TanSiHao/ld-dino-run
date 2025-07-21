@@ -5,10 +5,11 @@ A browser-based Dino Run game with LaunchDarkly feature flags integration. Contr
 ## ✨ Features
 
 - **Classic Dino Run Gameplay**: Jump over obstacles and score points
-- **LaunchDarkly Integration**: Three feature flags control game behavior:
+- **LaunchDarkly Integration**: Four feature flags control game behavior:
   - 🎨 **Dino Color**: 6 color options (green, blue, red, purple, orange, pink)
   - 🎯 **Difficulty**: 3 levels (easy, medium, hard) affecting speed and obstacles
   - 🌤️ **Weather**: 4 seasonal backgrounds (spring, summer, autumn, winter)
+  - 🚧 **Obstacle Type**: Different obstacle styles and behaviors
 - **Responsive Design**: Works on desktop and mobile
 - **Player Profiles**: Save names and track high scores
 - **Real-time Updates**: Changes apply instantly without page refresh
@@ -48,10 +49,11 @@ terraform apply
 1. Sign up at [LaunchDarkly](https://launchdarkly.com)
 2. Copy `environment.example` to `.env` and add your client-side ID
 3. Update `config.js` with your client-side ID
-4. Create three feature flags in LaunchDarkly:
+4. Create four feature flags in LaunchDarkly:
    - `dino-color` (string: green, blue, red, purple, orange, pink)
-   - `game-difficulty` (string: easy, medium, hard)
+   - `game-difficulty` (string: easy, medium, hard)  
    - `weather-background` (string: spring, summer, autumn, winter)
+   - `obstacle-type` (string: cactus, rock, bird)
 
 ## 📁 Project Structure
 
@@ -76,8 +78,11 @@ The game integrates with LaunchDarkly to demonstrate real-time feature flag capa
 - **Dino Color**: Changes dinosaur appearance instantly
 - **Difficulty**: Adjusts obstacle speed, frequency, and jump height
 - **Weather**: Updates background theme and colors
+- **Obstacle Type**: Changes obstacle appearance and behavior
 
-Changes made in the LaunchDarkly dashboard apply immediately without refreshing the page.
+**Real-time Updates**: Changes made in the LaunchDarkly dashboard apply immediately (1-2 seconds) without refreshing the page. The game uses LaunchDarkly's streaming API for instant flag updates.
+
+**Connection Management**: Singleton pattern ensures only one LaunchDarkly connection per session, preventing performance issues and duplicate events.
 
 ## 🔧 Development
 
@@ -87,15 +92,35 @@ cp environment.example .env
 # Edit .env with your LaunchDarkly credentials
 ```
 
+### Debugging & Monitoring
+The game includes comprehensive debugging tools for LaunchDarkly integration:
+- **Real-time monitoring**: Track connection status, flag values, and streaming health
+- **Keyboard shortcuts**: Quick access to diagnostic information (Alt+D, Alt+S, Alt+C)
+- **Browser console methods**: Detailed APIs for testing and troubleshooting
+- **Connection management**: Automatic prevention of duplicate LaunchDarkly instances
+
 ### Testing in Browser Console
 ```javascript
-// Check current flag values
+// Check LaunchDarkly status
+window.ldManager.getStatus()
+
+// Test all flag values
+window.ldManager.test()
+
+// Check current user context
+window.ldManager.getCurrentContext()
+
+// Test streaming connection
+window.ldManager.testStreaming()
+
+// Monitor connections (prevent multiple instances)
+window.ldManager.checkConnections()
+
+// Access individual flags
 window.ldManager.getDinoColor()
 window.ldManager.getDifficulty()
 window.ldManager.getWeather()
-
-// Test configuration
-window.DinoRunConfig.validate()
+window.ldManager.getObstacleType()
 
 // Access game instance
 window.dinoApp.game
@@ -103,7 +128,12 @@ window.dinoApp.game
 
 ### Keyboard Shortcuts
 - **SPACE**: Jump / Start game
-- **Alt + 1/2/3**: Development flag cycling (logged to console)
+- **Alt + R**: Refresh LaunchDarkly connection
+- **Alt + D**: Show LaunchDarkly status
+- **Alt + T**: Test all flags
+- **Alt + U**: Show current user context
+- **Alt + S**: Test streaming connection
+- **Alt + C**: Check connection count
 
 ## 📊 Observability & Analytics
 
@@ -131,10 +161,27 @@ See the [Observability Guide](docs/observability.md) for detailed implementation
 
 ### LaunchDarkly Issues
 - **Flags not working**: 
-  - Run `window.DinoRunConfig.validate()` in console
+  - Run `window.ldManager.getStatus()` in console
   - Verify client-side ID (not SDK key) in `config.js`
   - Check flags are ON in LaunchDarkly dashboard
   - Ensure flag keys match between `config.js` and LaunchDarkly
+
+- **CSP (Content Security Policy) Errors**: 
+  - If you see "Refused to connect to 'https://clientstream.launchdarkly.com'" errors
+  - The CSP in `index.html` includes required LaunchDarkly domains
+  - Required domains: `clientsdk.launchdarkly.com`, `stream.launchdarkly.com`, `clientstream.launchdarkly.com`, `events.launchdarkly.com`
+
+- **Real-time updates not working**:
+  - Check streaming status: `window.ldManager.testStreaming()`
+  - Verify browser console shows "Streaming connection established"
+  - Use Alt+S to test streaming connectivity
+  - Changes in LaunchDarkly dashboard should apply within 1-2 seconds
+
+- **Multiple connections / Performance issues**:
+  - Check connection count: `window.ldManager.checkConnections()`  
+  - Should show "✅ Single LaunchDarkly connection active"
+  - If multiple connections, refresh the page
+  - Singleton pattern prevents duplicate connections
 
 ### Terraform Issues
 - **Permission errors**: Verify LaunchDarkly access token has writer permissions
